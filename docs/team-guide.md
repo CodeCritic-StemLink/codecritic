@@ -2,7 +2,7 @@
 
 Everything the four of us need, in one file. Read it once end to end before you touch anything.
 
-Last updated 2026-08-12.
+Last updated 2026-08-12, after the first build session.
 
 ---
 
@@ -101,23 +101,55 @@ known in advance. `Rating` holds one score, linked to one review and one criteri
 
 ## 3. What already exists
 
-Pushed to `main` and working:
+State as of 2026-08-12. Everything here is built, tested and on `main`.
 
-**Database.** PostgreSQL 17 on Neon, hosted in Singapore. All five tables created by a migration
-file that lives in the repo, so anyone can rebuild the identical database.
+**Database.** PostgreSQL 17 on Neon, hosted in Singapore. All five tables, created by a migration
+file that lives in the repo so anyone can rebuild the identical database.
 
-**Back end.** Express with TypeScript. Runs on port 4000. Connects to the database through
-Prisma and answers real HTTP requests. Two endpoints exist so far: a health check and a bare
-`GET /submissions` that returns whatever is in the table.
+**Demo data.** `backend/prisma/seed.ts`, run with `npm run seed`. Five users with deliberately
+different tech stacks, ten submissions with overlapping tags and ages from two hours to eight
+days, and fourteen reviews with a rating for every criterion. Four submissions have no reviews on
+purpose, so the Feature 01 needs-help boost has something to lift. Karma is counted from the
+reviews rather than typed in.
 
-**Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand. Runs on port 3000.
-Clerk is wired in: sign in, sign up and the account menu all work.
+**Back end.** Express with TypeScript on port 4000, with:
 
-**Documents.** `docs/database-design.md` and `docs/api-design.md`, both written before the code
-as the SRS demands, plus this guide.
+- CORS, so the site on port 3000 is allowed to call it
+- JSON body parsing
+- Clerk middleware that identifies the caller without blocking anyone, so the public feed still
+  works logged out
+- One error handler, so every failure comes back as `{ "error": { "code", "message" } }` rather
+  than an HTML stack trace
+- A startup check that refuses to run and names any missing environment variable
 
-**What does not exist yet:** every real endpoint, every real page, seed data, the ranking engine,
-and deployment. That is the rest of this document.
+**Endpoints built so far:**
+
+| Endpoint | State |
+| --- | --- |
+| `GET /api/health` | Done |
+| `GET /api/submissions` | Works, but plain. Newest first, no ranking, no filters yet. |
+| `POST /api/users/sync` | Done. Creates or updates our User row from the Clerk identity. |
+| `PATCH /api/users/me` | Done. Edits your own profile only. |
+
+**Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
+is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
+up and account menu.
+
+**Documents.** `database-design.md`, `api-design.md`, `er-diagram.svg` and this guide.
+
+### What does not exist yet
+
+| Missing | Owner |
+| --- | --- |
+| `GET /submissions/:id`, `POST /submissions`, `POST /submissions/:id/reviews` | Andrew |
+| `GET /users/:username` and its insights | Aqeel |
+| The ranking engine and the ranked feed | Osini |
+| Every page: feed, detail, post form, review form, profile | Aaysha |
+| Styled sign in and sign up pages on our own routes | Aaysha |
+| Deployment to Render and Vercel | Osini |
+| A SQL dump committed for long term revival | Osini |
+
+**Nobody is blocked.** Every one of those can be started right now against what already exists.
 
 ---
 
@@ -627,30 +659,32 @@ folder.
 
 Deadline is around 2026-08-15.
 
-### Today, 12 August: everything works locally
+### 12 August: everything works locally
+
+Start here when you wake up. Nothing in this list is waiting on anything else.
+
+| Who | First thing to do | Done means |
+| --- | --- | --- |
+| Andrew | `GET /submissions/:id` | All three endpoints working, every validation rule in section 5 enforced, tested with curl |
+| Aqeel | `GET /users/:username` | Profile returns karma, both counts and the insights, every figure counted from real rows |
+| Aaysha | `frontend/src/lib/api.ts`, then the feed page | Feed and detail pages showing real seeded data, plus sign in and sign up on our own styled routes |
+| Osini | `backend/src/lib/ranking.ts` | Feed visibly reordered per user, with the score breakdown available |
+
+Aaysha also needs to call `POST /users/sync` once after a Clerk sign in, so a person who signs up
+gets a row in our database. That endpoint is ready and waiting.
+
+### 13 August: everything is connected
 
 | Who | Done means |
 | --- | --- |
-| Aqeel | Profile endpoint returning karma, both counts and the insights, all counted from real rows |
-| Andrew | All three endpoints working, every validation rule enforced, tested by hand |
-| Osini | `/users/sync` working, ranking module written and the feed reordering |
-| Aaysha | Feed and detail pages rendering real data from the API |
-
-**The seed data is already in the repository**, so everyone can start against realistic rows
-immediately. Run `npm run seed` in `backend` after pulling.
-
-### Tomorrow, 13 August: everything is connected
-
-| Who | Done means |
-| --- | --- |
-| Aqeel | Profile endpoint attack tested, and the queries explainable out loud |
-| Andrew | Every endpoint attack tested, section 12's list |
-| Osini | Feed order visibly different per user, with a "why this order" view |
-| Aaysha | All five pages working end to end, responsive on all three sizes |
+| Andrew | Every endpoint attack tested against the list in section 12 |
+| Aqeel | Profile queries explainable out loud, insights correct |
+| Osini | Feature 01 finished with a "why this order" view, ready to present separately |
+| Aaysha | All five pages working end to end, responsive on mobile, tablet and desktop |
 
 ### 14 August: deployed and rehearsed
 
-Deploy all three parts, run through the whole site on the real URL, and every one of us walks the
+Deploy all three parts, walk the whole site on the real URL, and every one of us explains the
 entire system out loud to the other three. Not the part you wrote. The whole thing.
 
 ### 15 August: submit
