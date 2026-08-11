@@ -12,6 +12,10 @@ Built as an MVP for the **Software Engineering Professionals Program**.
 | Platform | Developer focused peer code review social platform |
 | Live site | Not deployed yet |
 
+> **New to this project? Read [docs/team-guide.md](docs/team-guide.md) first.** It covers setup
+> from nothing, how we use branches and pull requests, who owns what, and the plan to the
+> deadline.
+
 ---
 
 ## Table of contents
