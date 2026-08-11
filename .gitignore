@@ -1,44 +1,11 @@
-# Dependencies
-node_modules/
-.pnp
-.pnp.js
+# The backend and frontend folders each have their own .gitignore for the things
+# specific to them. This one covers the repository root only.
 
-# Environment variables. Never commit these.
-# They hold the Clerk secret key and the database password, and this repo is public.
+# Secrets, wherever they land
 .env
 .env.*
-!.env.example
 
-# Next.js
-.next/
-out/
-build/
-dist/
-next-env.d.ts
-
-# Prisma
-prisma/generated/
-*.db
-*.db-journal
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Testing
-coverage/
-
-# Vercel
-.vercel
-
-# TypeScript
-*.tsbuildinfo
-
-# Operating system files
+# Operating system clutter
 .DS_Store
 Thumbs.db
 desktop.ini

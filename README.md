@@ -186,13 +186,11 @@ credibility before trusting their feedback.
 ## Repository structure
 
 ```
-codecritic/                 the repository
+codecritic/
+  backend/     Express API, TypeScript, Prisma schema, seed script
+  frontend/    Next.js app, TypeScript, Tailwind, Shadcn, Zustand, Clerk
+  docs/        database/ER design and API design documents
   README.md
-  .gitignore
-  codecritic/               the application
-    docs/                   database/ER design and API design documents
-    backend/                Express API, TypeScript, Prisma schema, seed script
-    frontend/               Next.js app, TypeScript, Tailwind, Shadcn, Zustand, Clerk
 ```
 
 ---
@@ -206,12 +204,18 @@ You need Node 22 or newer. Check with `node --version`.
 From the repository root:
 
 ```
-cd codecritic/backend
+cd backend
 npm install
 ```
 
-Copy `.env.example` to `.env` and fill in `DATABASE_URL`. Ask Osini for the value, or take it
-from the Neon dashboard. That file is ignored by git and must never be committed.
+Create a file called `.env` inside `backend` containing:
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | The PostgreSQL connection string from Neon. Ask Osini. |
+
+Environment files are ignored by git and are never committed, so ask a team member for the
+values rather than looking for them in the repository.
 
 ```
 npx prisma generate
@@ -246,7 +250,32 @@ Useful extras:
 
 ### The front end
 
-Not built yet. Instructions go here when it is.
+From the repository root:
+
+```
+cd frontend
+npm install
+```
+
+Create a file called `.env.local` inside `frontend` containing:
+
+| Variable | Value |
+| --- | --- |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | From the Clerk dashboard, Configure then API Keys. Starts with `pk_test_`. |
+| `CLERK_SECRET_KEY` | Same page. Starts with `sk_test_`. |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:4000/api` |
+
+Anything named `NEXT_PUBLIC_` is sent to the browser and is readable by any visitor. Never put
+that prefix in front of a secret.
+
+Then start it:
+
+```
+npm run dev
+```
+
+The site runs at http://localhost:3000. The back end must be running as well, or the pages will
+have no data to show.
 
 ---
 
