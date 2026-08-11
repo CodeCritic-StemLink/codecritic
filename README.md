@@ -199,8 +199,54 @@ codecritic/                 the repository
 
 ## Getting started
 
-Setup instructions are added to this section as each part is built, so that everything written
-here has actually been run and works.
+You need Node 22 or newer. Check with `node --version`.
+
+### The back end
+
+From the repository root:
+
+```
+cd codecritic/backend
+npm install
+```
+
+Copy `.env.example` to `.env` and fill in `DATABASE_URL`. Ask Osini for the value, or take it
+from the Neon dashboard. That file is ignored by git and must never be committed.
+
+```
+npx prisma generate
+```
+
+**Do not skip that command.** Prisma 7 writes the database client into `src/generated/prisma`,
+which is not committed, so nothing compiles until you generate it on your own machine. Run it
+again any time `prisma/schema.prisma` changes.
+
+If the database is empty on your machine, create the tables:
+
+```
+npx prisma migrate dev
+```
+
+Then start it:
+
+```
+npm run dev
+```
+
+The API runs at http://localhost:4000/api. Check it is alive at
+http://localhost:4000/api/health, which should return `{"ok":true,"service":"codecritic-api"}`.
+
+Useful extras:
+
+| Command | What it does |
+| --- | --- |
+| `npx prisma studio` | Opens a browser view of the database where you can read and edit rows |
+| `npm run build` | Compiles TypeScript into `dist` |
+| `npm start` | Runs the compiled JavaScript, which is what the live server does |
+
+### The front end
+
+Not built yet. Instructions go here when it is.
 
 ---
 

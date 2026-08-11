@@ -1,0 +1,96 @@
+// CodeCritic database schema.
+// This is the code version of codecritic/docs/database-design.md.
+// If you change one, change the other.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// A person. Created the first time someone signs in through Clerk.
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // the id Clerk gives us, our link to the login system
+  username  String   @unique // used in the profile URL, /profile/:username
+  bio       String?
+  techStack String[] // for example ["React", "Next.js"]. Drives the Feature 01 ranking.
+  githubUrl String?
+  karma     Int      @default(0) // exactly +2 per review written, never goes down
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions Submission[] // requests this person posted
+  reviews     Review[] // reviews this person wrote
+}
+
+// A review request. The thing being reviewed.
+model Submission {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  repoUrl     String
+  tags        String[] // matched against User.techStack for ranking
+  authorId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author   User        @relation(fields: [authorId], references: [id])
+  criteria Criterion[] // between 1 and 5, enforced in the API
+  reviews  Review[]
+
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+// One thing the poster wants scored, for example "Code Quality".
+// Invented per submission, which is why this cannot be a fixed list of columns.
+model Criterion {
+  id           String @id @default(cuid())
+  label        String
+  position     Int // display order, 0 to 4
+  submissionId String
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  ratings    Rating[]
+
+  @@index([submissionId])
+}
+
+// One person's written feedback on one submission.
+model Review {
+  id           String   @id @default(cuid())
+  strengths    String
+  improvements String
+  resources    String[] // optional helpful links, can be empty
+  submissionId String
+  reviewerId   String
+  createdAt    DateTime @default(now())
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User       @relation(fields: [reviewerId], references: [id])
+  ratings    Rating[]
+
+  // One review per person per submission. The database refuses the second one even if
+  // two requests arrive at the same instant, which an API check alone cannot promise.
+  @@unique([submissionId, reviewerId])
+  @@index([reviewerId])
+}
+
+// A single score out of 10, for one criterion, inside one review.
+model Rating {
+  id          String @id @default(cuid())
+  score       Int // 1 to 10, checked in the API before the write
+  reviewId    String
+  criterionId String
+
+  review    Review    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  criterion Criterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+
+  // One score per criterion per review, no duplicates.
+  @@unique([reviewId, criterionId])
+  @@index([criterionId])
+}
