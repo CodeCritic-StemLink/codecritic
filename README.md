@@ -186,14 +186,21 @@ credibility before trusting their feedback.
 ## Repository structure
 
 ```
-codecritic/
-  frontend/     Next.js application
-  backend/      Express API and Prisma schema
-  docs/         Database/ER design and API design documents
+codecritic/                 the repository
   README.md
+  .gitignore
+  codecritic/               the application
+    docs/                   database/ER design and API design documents
+    backend/                Express API, TypeScript, Prisma schema, seed script
+    frontend/               Next.js app, TypeScript, Tailwind, Shadcn, Zustand, Clerk
 ```
 
-Setup and run instructions will be added to this file as each part is built.
+---
+
+## Getting started
+
+Setup instructions are added to this section as each part is built, so that everything written
+here has actually been run and works.
 
 ---
 
