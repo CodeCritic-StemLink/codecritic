@@ -455,24 +455,41 @@ a summary, **Commit**, **Publish branch**, **Create Pull Request**.
 
 ### Commit messages
 
-Say what the commit does, in the imperative, as though completing the sentence "this commit will".
+We use **Conventional Commits**. Every message starts with a type, a colon, then what the commit
+does. The type tells a reader at a glance what kind of change it is, without opening the diff.
 
-Good:
+| Type | Use it when |
+| --- | --- |
+| `feat:` | You built something new that a user can see or use |
+| `fix:` | You fixed a bug |
+| `chore:` | Setup, config, dependencies. Not application code. |
+| `style:` | Only formatting or CSS changed. Nothing behaves differently. |
+| `refactor:` | You rewrote code but nothing looks different to a user |
+| `docs:` | README, design documents, comments |
+| `test:` | You added or changed tests |
+
+You can add a scope in brackets when it helps say which area changed.
+
+Real examples from this project:
 
 ```
-Add the review endpoint with full validation
-Block self reviews and duplicate reviews
-Fix the feed showing reviewed posts as pending
+feat: add the seed script with demo users and submissions
+feat(reviews): block self reviews and duplicate reviews
+feat(feed): rank submissions by the user's tech stack
+fix: feed showing reviewed submissions as pending
+chore: install express, prisma and clerk
+docs: add the team guide and ER diagram
+refactor: move the ranking maths into its own module
+style: tidy the spacing on the submission card
 ```
 
-Bad:
+Two rules on top of the type:
 
-```
-update
-fixed stuff
-work
-final final v2
-```
+**Write it in the imperative**, as though completing the sentence "this commit will". So
+`feat: add the review endpoint`, not `added the review endpoint` or `adding review endpoint`.
+
+**The title is enough for small changes.** Add a description underneath when the why is not
+obvious from the title, especially when you made a decision someone might question later.
 
 **Commit small and commit often.** Our assessors look at the history to see that all four of us
 actually contributed. One giant commit at 3am on the last day looks exactly like what it is.
@@ -506,25 +523,27 @@ The best fix is prevention: we split the work by file, in section 9, so this sho
 
 Split so nobody waits on anybody. Everything in a given column can be built at the same time.
 
-### Aqeel: data and the profile
+### Aqeel: the profile and Feature 02
 
-**First job, and it is urgent, because everyone else is blocked without it:** the seed script.
-A file at `backend/prisma/seed.ts` that fills the database with realistic fake data.
+The seed data is already done, so you are not blocked and nobody is blocked by you.
 
-We need at least:
+**Your job:** `GET /users/:username`, which is Feature 02.
 
-- 4 or 5 users with different tech stacks, so the ranking is visibly different per person
-- 8 or 10 submissions with varied tags and varied ages, some with zero reviews
-- A dozen reviews with ratings, so profiles have something to count
+The profile returns tech stack, bio, GitHub link, Karma, the count of reviews given, the count of
+reviews received, and at least one insight derived from real rows. The insights we agreed are in
+`docs/api-design.md`: which technologies this person most often reviews in, their review activity
+by month, and their average score given.
 
-Aim for data that makes the demo tell a story. A submission tagged React that is two hours old
-and has no reviews should shoot to the top for a React developer.
+Two things that carry the marks here:
 
-**Second job:** `GET /users/:username`, which is Feature 02. Profile with karma, reviews given,
-reviews received, plus the derived insights. Every figure has to be counted from real rows and
-you have to be able to explain the query.
+- **Every figure must be counted from the database**, never stored or hard coded. Karma is the
+  one exception, and it is a column precisely because it is derivable.
+- **You must be able to explain each query out loud.** "Reviews received" is the tricky one: it
+  is not reviews where this person is the reviewer, it is reviews on submissions this person
+  wrote. Make sure you can say why those are different.
 
-**Files you own:** `backend/prisma/seed.ts`, `backend/src/routes/users.ts` (the profile route).
+**Files you own:** `backend/src/routes/users.ts`, the profile route only. Osini owns the sync
+route in the same file, so keep to your half and pull `main` often.
 
 ### Andrew: the core API
 
@@ -548,18 +567,24 @@ order so the caller gets the most useful error:
 
 **Files you own:** `backend/src/routes/submissions.ts`, and any validation helpers.
 
-### Osini: identity, ranking, deployment
+### Osini: everything that blocks other people
 
-1. `POST /users/sync`, which creates our `User` row the first time a Clerk identity appears. This
+The rule we agreed: **anything that blocks somebody else is Osini's job**, so the other three
+never sit waiting.
+
+1. **The seed script**, `backend/prisma/seed.ts`. Done, because without data everyone else is
+   building against an empty screen.
+2. `POST /users/sync`, which creates our `User` row the first time a Clerk identity appears. This
    is the gap between "signed in with Clerk" and "exists in our database", and nothing on the
-   site works for a logged in user until it is closed.
-2. The ranking engine, Feature 01, written as its own module at `backend/src/lib/ranking.ts` so
+   site works for a logged in user until it is closed. Aaysha is blocked on this.
+3. The ranking engine, Feature 01, written as its own module at `backend/src/lib/ranking.ts` so
    Andrew's route can call it without either of you waiting for the other.
-3. `GET /submissions`, the feed, using that module.
-4. Deployment, section 11.
-5. Keeping the documents in `docs/` true as things change.
+4. `GET /submissions`, the feed, using that module.
+5. Deployment, section 11.
+6. Keeping the documents in `docs/` true as things change.
 
-**Files you own:** `backend/src/lib/ranking.ts`, the feed route, the sync route, `docs/`.
+**Files you own:** `backend/prisma/seed.ts`, `backend/src/lib/ranking.ts`, the feed route, the
+sync route, `docs/`.
 
 ### Aaysha: the entire front end
 
@@ -597,19 +622,19 @@ Deadline is around 2026-08-15.
 
 | Who | Done means |
 | --- | --- |
-| Aqeel | Seed script written and run. The database has realistic data. `GET /submissions` returns real rows. |
+| Aqeel | Profile endpoint returning karma, both counts and the insights, all counted from real rows |
 | Andrew | All three endpoints working, every validation rule enforced, tested by hand |
 | Osini | `/users/sync` working, ranking module written and the feed reordering |
 | Aaysha | Feed and detail pages rendering real data from the API |
 
-**The seed script is the critical path.** Aqeel starts there and tells the group the moment it is
-pushed, because until it exists everyone else is testing against an empty screen.
+**The seed data is already in the repository**, so everyone can start against realistic rows
+immediately. Run `npm run seed` in `backend` after pulling.
 
 ### Tomorrow, 13 August: everything is connected
 
 | Who | Done means |
 | --- | --- |
-| Aqeel | Profile endpoint with insights |
+| Aqeel | Profile endpoint attack tested, and the queries explainable out loud |
 | Andrew | Every endpoint attack tested, section 12's list |
 | Osini | Feed order visibly different per user, with a "why this order" view |
 | Aaysha | All five pages working end to end, responsive on all three sizes |
