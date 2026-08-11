@@ -306,13 +306,22 @@ cd backend
 npm install
 ```
 
-Create a file called `.env` inside `backend` containing one line:
+Create a file called `.env` inside `backend` containing three lines:
 
 ```
 DATABASE_URL="the value Osini sent you"
+CLERK_SECRET_KEY=the sk_test_ key Osini sent
+CLERK_PUBLISHABLE_KEY=the pk_test_ key Osini sent
 ```
 
-Keep the quotes. That file is ignored by git and must never be committed.
+Keep the quotes on `DATABASE_URL`, because a password can contain characters that
+would otherwise be read as the start of a comment. The Clerk keys need no quotes.
+
+Note the back end keys have **no** `NEXT_PUBLIC_` prefix. That prefix is a Next.js
+thing meaning "send this to the browser", and nothing here goes to a browser.
+
+That file is ignored by git and must never be committed. The server refuses to start
+if any of the three is missing, and tells you which.
 
 Then:
 
