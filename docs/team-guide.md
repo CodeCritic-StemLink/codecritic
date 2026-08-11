@@ -125,71 +125,38 @@ and deployment. That is the rest of this document.
 
 Five tables. Everything on the site is one of these.
 
-```mermaid
-erDiagram
-    User ||--o{ Submission : "posts"
-    User ||--o{ Review : "writes"
-    Submission ||--|{ Criterion : "defines 1 to 5"
-    Submission ||--o{ Review : "receives"
-    Review ||--|{ Rating : "one per criterion"
-    Criterion ||--o{ Rating : "is scored by"
+![CodeCritic entity relationship diagram](er-diagram.svg)
 
-    User {
-        string id PK
-        string clerkId UK "the id Clerk gives us"
-        string username UK
-        string bio
-        string_array techStack
-        string githubUrl
-        int karma "starts at 0, plus 2 per review"
-        datetime createdAt
-        datetime updatedAt
-    }
-
-    Submission {
-        string id PK
-        string title
-        string description
-        string repoUrl
-        string_array tags
-        string authorId FK
-        datetime createdAt
-        datetime updatedAt
-    }
-
-    Criterion {
-        string id PK
-        string label "for example Code Quality"
-        int position "display order 0 to 4"
-        string submissionId FK
-    }
-
-    Review {
-        string id PK
-        string strengths
-        string improvements
-        string_array resources
-        string submissionId FK
-        string reviewerId FK
-        datetime createdAt
-    }
-
-    Rating {
-        string id PK
-        int score "1 to 10"
-        string reviewId FK
-        string criterionId FK
-    }
-```
+The same diagram written as text, which is easier to edit, is in `database-design.md`. If you
+change the schema, change both.
 
 ### How to read that diagram
 
-The crow's foot, the branching end of a line, means "many". A single bar means "one".
+Each box is a table. The teal bar is its name, the rows underneath are its columns.
 
-- `User ||--o{ Submission` means one user posts many submissions, and the small circle means it
-  can be zero. A new user has posted nothing.
-- `Submission ||--|{ Criterion` has a bar instead of a circle, meaning **at least one**. Every
-  submission must have between 1 and 5 criteria.
+| Label | Meaning |
+| --- | --- |
+| PK | Primary key. The column that uniquely identifies a row. |
+| FK | Foreign key. A column holding the id of a row in another table. This is how tables connect. |
+| unique | No two rows may share this value. Two people cannot have the same username. |
+| text array | A column holding a list, for example `["React", "Next.js"]` |
+
+Every line between two boxes is a relationship, and the ends tell you how many:
+
+- A plain end marked **1** means exactly one row.
+- The branching end, called a crow's foot, marked **many**, means any number of rows including
+  none.
+
+So the top left line reads: one User posts many Submissions. A brand new user has posted nothing,
+and that is still "many", because many includes zero.
+
+The one exception is Submission to Criterion, marked **1 to 5**. Every submission must have at
+least one criterion and at most five. That limit is enforced in the API rather than the database,
+because a row count limit is not something SQL expresses cleanly. It is listed in section 5 with
+the other validation rules.
+
+The dashed yellow box is not a table. It is a reminder of the two rules the database itself
+enforces, explained just below.
 
 ### Why PostgreSQL and not MySQL
 

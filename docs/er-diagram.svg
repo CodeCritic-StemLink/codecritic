@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 620" width="1000" height="620" role="img" aria-labelledby="t d" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="t">CodeCritic database, entity relationship diagram</title>
+  <desc id="d">Five tables. A User posts many Submissions and writes many Reviews. A Submission defines between one and five Criteria and receives many Reviews. A Review contains one Rating per Criterion, and each Criterion is scored by many Ratings.</desc>
+
+  <rect x="0" y="0" width="1000" height="620" fill="#FBFBF9"/>
+
+  <!-- relationship lines, drawn first so boxes sit on top -->
+  <g stroke="#9AA4AE" stroke-width="1.5" fill="none">
+    <path d="M290 220 H330 V180 H366"/>
+    <path d="M290 330 H330 V470 H366"/>
+    <path d="M634 100 H706"/>
+    <path d="M500 252 V396"/>
+    <path d="M634 470 H706"/>
+    <path d="M835 164 V396"/>
+  </g>
+
+  <!-- crow feet, the branching end meaning many -->
+  <g stroke="#9AA4AE" stroke-width="1.5" fill="none">
+    <g transform="translate(366,180)"><path d="M0 0 L-10 -6 M0 0 L-10 0 M0 0 L-10 6"/></g>
+    <g transform="translate(366,470)"><path d="M0 0 L-10 -6 M0 0 L-10 0 M0 0 L-10 6"/></g>
+    <g transform="translate(706,100)"><path d="M0 0 L-10 -6 M0 0 L-10 0 M0 0 L-10 6"/></g>
+    <g transform="translate(500,396)"><path d="M0 0 L-6 -10 M0 0 L0 -10 M0 0 L6 -10"/></g>
+    <g transform="translate(706,470)"><path d="M0 0 L-10 -6 M0 0 L-10 0 M0 0 L-10 6"/></g>
+    <g transform="translate(835,396)"><path d="M0 0 L-6 -10 M0 0 L0 -10 M0 0 L6 -10"/></g>
+  </g>
+
+  <!-- relationship labels -->
+  <g font-size="11.5" fill="#5B6672">
+    <text x="296" y="212">1</text>
+    <text x="352" y="172" text-anchor="end">many</text>
+    <text x="336" y="150" font-style="italic" fill="#1F6F68">posts</text>
+
+    <text x="296" y="322">1</text>
+    <text x="352" y="462" text-anchor="end">many</text>
+    <text x="336" y="392" font-style="italic" fill="#1F6F68">writes</text>
+
+    <text x="640" y="92">1</text>
+    <text x="700" y="92" text-anchor="end">1 to 5</text>
+    <text x="670" y="126" text-anchor="middle" font-style="italic" fill="#1F6F68">defines</text>
+
+    <text x="506" y="272">1</text>
+    <text x="506" y="392">many</text>
+    <text x="492" y="332" text-anchor="end" font-style="italic" fill="#1F6F68">receives</text>
+
+    <text x="640" y="462">1</text>
+    <text x="700" y="462" text-anchor="end">many</text>
+    <text x="670" y="496" text-anchor="middle" font-style="italic" fill="#1F6F68">contains</text>
+
+    <text x="841" y="188">1</text>
+    <text x="841" y="392">many</text>
+    <text x="827" y="300" text-anchor="end" font-style="italic" fill="#1F6F68">scored by</text>
+  </g>
+
+  <!-- ===================== User ===================== -->
+  <g>
+    <rect x="30" y="160" width="260" height="230" rx="8" fill="#FFFFFF" stroke="#D3D9DE"/>
+    <path d="M30 168 a8 8 0 0 1 8 -8 h244 a8 8 0 0 1 8 8 v24 h-260 z" fill="#1F6F68"/>
+    <text x="44" y="185" font-size="14" font-weight="600" fill="#FFFFFF">User</text>
+    <text x="276" y="185" font-size="10.5" fill="#BFE0DB" text-anchor="end">a person</text>
+    <g font-size="12" fill="#242A31">
+      <text x="44" y="212">id</text><text x="276" y="212" text-anchor="end" fill="#0A6E64" font-size="10.5">PK</text>
+      <text x="44" y="234">clerkId</text><text x="276" y="234" text-anchor="end" fill="#0A6E64" font-size="10.5">unique</text>
+      <text x="44" y="256">username</text><text x="276" y="256" text-anchor="end" fill="#0A6E64" font-size="10.5">unique</text>
+      <text x="44" y="278">bio</text><text x="276" y="278" text-anchor="end" fill="#68727D" font-size="10.5">optional</text>
+      <text x="44" y="300">techStack</text><text x="276" y="300" text-anchor="end" fill="#68727D" font-size="10.5">text array</text>
+      <text x="44" y="322">githubUrl</text><text x="276" y="322" text-anchor="end" fill="#68727D" font-size="10.5">optional</text>
+      <text x="44" y="344" font-weight="600">karma</text><text x="276" y="344" text-anchor="end" fill="#68727D" font-size="10.5">int, starts 0</text>
+      <text x="44" y="366">createdAt</text>
+      <text x="44" y="384">updatedAt</text>
+    </g>
+  </g>
+
+  <!-- ===================== Submission ===================== -->
+  <g>
+    <rect x="370" y="44" width="264" height="208" rx="8" fill="#FFFFFF" stroke="#D3D9DE"/>
+    <path d="M370 52 a8 8 0 0 1 8 -8 h248 a8 8 0 0 1 8 8 v24 h-264 z" fill="#1F6F68"/>
+    <text x="384" y="69" font-size="14" font-weight="600" fill="#FFFFFF">Submission</text>
+    <text x="620" y="69" font-size="10.5" fill="#BFE0DB" text-anchor="end">a review request</text>
+    <g font-size="12" fill="#242A31">
+      <text x="384" y="96">id</text><text x="620" y="96" text-anchor="end" fill="#0A6E64" font-size="10.5">PK</text>
+      <text x="384" y="118">title</text>
+      <text x="384" y="140">description</text>
+      <text x="384" y="162">repoUrl</text>
+      <text x="384" y="184">tags</text><text x="620" y="184" text-anchor="end" fill="#68727D" font-size="10.5">text array</text>
+      <text x="384" y="206">authorId</text><text x="620" y="206" text-anchor="end" fill="#0A6E64" font-size="10.5">FK to User</text>
+      <text x="384" y="228">createdAt</text><text x="620" y="228" text-anchor="end" fill="#68727D" font-size="10.5">drives the feed</text>
+      <text x="384" y="246">updatedAt</text>
+    </g>
+  </g>
+
+  <!-- ===================== Criterion ===================== -->
+  <g>
+    <rect x="710" y="44" width="250" height="120" rx="8" fill="#FFFFFF" stroke="#D3D9DE"/>
+    <path d="M710 52 a8 8 0 0 1 8 -8 h234 a8 8 0 0 1 8 8 v24 h-250 z" fill="#1F6F68"/>
+    <text x="724" y="69" font-size="14" font-weight="600" fill="#FFFFFF">Criterion</text>
+    <text x="946" y="69" font-size="10.5" fill="#BFE0DB" text-anchor="end">a thing to score</text>
+    <g font-size="12" fill="#242A31">
+      <text x="724" y="96">id</text><text x="946" y="96" text-anchor="end" fill="#0A6E64" font-size="10.5">PK</text>
+      <text x="724" y="118">label</text><text x="946" y="118" text-anchor="end" fill="#68727D" font-size="10.5">"Code Quality"</text>
+      <text x="724" y="140">position</text><text x="946" y="140" text-anchor="end" fill="#68727D" font-size="10.5">order, 0 to 4</text>
+      <text x="724" y="158">submissionId</text><text x="946" y="158" text-anchor="end" fill="#0A6E64" font-size="10.5">FK</text>
+    </g>
+  </g>
+
+  <!-- ===================== Review ===================== -->
+  <g>
+    <rect x="370" y="400" width="264" height="186" rx="8" fill="#FFFFFF" stroke="#D3D9DE"/>
+    <path d="M370 408 a8 8 0 0 1 8 -8 h248 a8 8 0 0 1 8 8 v24 h-264 z" fill="#1F6F68"/>
+    <text x="384" y="425" font-size="14" font-weight="600" fill="#FFFFFF">Review</text>
+    <text x="620" y="425" font-size="10.5" fill="#BFE0DB" text-anchor="end">one person's feedback</text>
+    <g font-size="12" fill="#242A31">
+      <text x="384" y="452">id</text><text x="620" y="452" text-anchor="end" fill="#0A6E64" font-size="10.5">PK</text>
+      <text x="384" y="474">strengths</text>
+      <text x="384" y="496">improvements</text>
+      <text x="384" y="518">resources</text><text x="620" y="518" text-anchor="end" fill="#68727D" font-size="10.5">text array</text>
+      <text x="384" y="540">submissionId</text><text x="620" y="540" text-anchor="end" fill="#0A6E64" font-size="10.5">FK</text>
+      <text x="384" y="562">reviewerId</text><text x="620" y="562" text-anchor="end" fill="#0A6E64" font-size="10.5">FK to User</text>
+      <text x="384" y="580">createdAt</text>
+    </g>
+  </g>
+
+  <!-- ===================== Rating ===================== -->
+  <g>
+    <rect x="710" y="400" width="250" height="120" rx="8" fill="#FFFFFF" stroke="#D3D9DE"/>
+    <path d="M710 408 a8 8 0 0 1 8 -8 h234 a8 8 0 0 1 8 8 v24 h-250 z" fill="#1F6F68"/>
+    <text x="724" y="425" font-size="14" font-weight="600" fill="#FFFFFF">Rating</text>
+    <text x="946" y="425" font-size="10.5" fill="#BFE0DB" text-anchor="end">one score out of 10</text>
+    <g font-size="12" fill="#242A31">
+      <text x="724" y="452">id</text><text x="946" y="452" text-anchor="end" fill="#0A6E64" font-size="10.5">PK</text>
+      <text x="724" y="474" font-weight="600">score</text><text x="946" y="474" text-anchor="end" fill="#68727D" font-size="10.5">int, 1 to 10</text>
+      <text x="724" y="496">reviewId</text><text x="946" y="496" text-anchor="end" fill="#0A6E64" font-size="10.5">FK</text>
+      <text x="724" y="514">criterionId</text><text x="946" y="514" text-anchor="end" fill="#0A6E64" font-size="10.5">FK</text>
+    </g>
+  </g>
+
+  <!-- the two constraints, called out -->
+  <g>
+    <rect x="30" y="430" width="300" height="86" rx="8" fill="#FFFFFF" stroke="#C9A227" stroke-dasharray="4 3"/>
+    <text x="46" y="452" font-size="11" font-weight="600" fill="#8A6D0B">The two rules the database enforces</text>
+    <text x="46" y="472" font-size="11" fill="#5B6672">Review: (submissionId, reviewerId) is unique</text>
+    <text x="46" y="488" font-size="11" fill="#5B6672">so one person reviews a submission once.</text>
+    <text x="46" y="508" font-size="11" fill="#5B6672">Rating: (reviewId, criterionId) is unique.</text>
+  </g>
+</svg>

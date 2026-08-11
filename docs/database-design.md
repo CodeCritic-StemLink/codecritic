@@ -21,6 +21,11 @@ five tables.
 
 ## 2. Entity relationship diagram
 
+![CodeCritic entity relationship diagram](er-diagram.svg)
+
+Below is the same diagram written as text. It is the easier one to edit. If you change the
+schema, change both this and `er-diagram.svg`.
+
 ```mermaid
 erDiagram
     User ||--o{ Submission : "posts"
