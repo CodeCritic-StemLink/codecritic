@@ -23,7 +23,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
 
   // The token is how the API knows who is asking. Signed out, this is null and the API
   // returns newest first, which the SRS requires the public feed to do.
-  const { getToken } = await auth();
+  const { userId, getToken } = await auth();
   const token = await getToken();
 
   let feed;
@@ -70,8 +70,32 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
     return qs ? `/?${qs}` : "/";
   };
 
+  // Signed in to Clerk, but the API did not personalise, which means there is no row for
+  // this person in our own database yet. Nothing can be sorted for someone whose
+  // technologies we do not know.
+  const needsProfile = Boolean(userId) && !feed.personalised;
+
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-10">
+      {needsProfile ? (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-primary bg-accent p-4">
+          <div>
+            <p className="text-[14px] font-semibold text-accent-foreground">
+              Finish your profile to get a feed of your own
+            </p>
+            <p className="mt-0.5 text-[13px] text-accent-foreground/80">
+              Pick the technologies you work with and these requests reorder around them.
+            </p>
+          </div>
+          <Link
+            href="/profile/setup"
+            className="rounded-md bg-primary px-3.5 py-2 text-[13px] font-semibold text-primary-foreground"
+          >
+            Set up profile
+          </Link>
+        </div>
+      ) : null}
+
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[21px] font-semibold tracking-tight">

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -8,34 +7,36 @@ import { Button } from "@/components/ui/button";
 /**
  * Switches between light and dark.
  *
- * The mounted check exists for a real reason. The server does not know which theme the
- * visitor prefers, so if we rendered the icon straight away the server and the browser
- * would disagree and React would complain about a hydration mismatch. Rendering an empty
- * button of the same size until the browser has caught up avoids that, and avoids the
- * layout jumping.
+ * There is no React state here on purpose. The server cannot know which theme the
+ * visitor prefers, so anything stored in state would differ between the server and the
+ * browser and React would complain about a hydration mismatch.
+ *
+ * Instead both icons are always rendered and CSS decides which one is visible, using the
+ * class next-themes puts on the html element. CSS runs after the HTML arrives, so there
+ * is nothing for React to disagree about.
+ *
+ * The click reads that same class straight from the document, which is always accurate
+ * because a click can only happen once the page is running.
  */
 export function ThemeToggle() {
-  const [mounted, setMounted] = useState(false);
-  const { resolvedTheme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) {
-    return <Button variant="ghost" size="sm" className="w-9" aria-hidden />;
+  function toggle() {
+    const isDark = document.documentElement.classList.contains("dark");
+    setTheme(isDark ? "light" : "dark");
   }
-
-  const isDark = resolvedTheme === "dark";
 
   return (
     <Button
       variant="ghost"
       size="sm"
       className="w-9"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={toggle}
+      aria-label="Switch between light and dark mode"
+      title="Switch between light and dark mode"
     >
-      {isDark ? "☀" : "☽"}
+      <span className="dark:hidden">☽</span>
+      <span className="hidden dark:inline">☀</span>
     </Button>
   );
 }
