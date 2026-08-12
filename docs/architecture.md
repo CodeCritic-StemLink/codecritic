@@ -133,11 +133,24 @@ Two reasons for a separate folder rather than sitting next to the code:
 
 The cost is that imports reach back with `../../src/...`, which is the trade we accepted.
 
-Run them with `npm test`. That uses Node's own test runner through tsx, so there is no test
-framework installed and no config file to explain.
+Run them with `npm test`. That currently uses Node's own test runner through tsx, so there is no
+test framework installed and no config file.
 
 `npm run typecheck` checks both `src` and `tests`, using `tsconfig.test.json`. Run it before
 opening a pull request.
+
+**Test framework: decided later.** The group's intention is to move to Jest. Node's built in
+runner is in place for now so the Feature 01 tests exist and pass, and the `tests/` folder is
+already where Jest would expect to find things.
+
+Two things to know when we make the switch. The 19 existing tests would need converting from
+`node:test` to Jest, which is mechanical but not free, roughly half an hour. And Jest on a
+TypeScript project needs `ts-jest` and a config file, which is the usual place people lose time.
+
+Nothing in the class notes requires a unit test framework. What the programme teaches under
+testing is a **Postman collection** with `baseUrl` and token as collection variables, which our
+mentors can import and fire at the API directly. That is the deliverable that is actually
+expected, and it should be built before we spend time on framework choices.
 
 ### The import rules
 
