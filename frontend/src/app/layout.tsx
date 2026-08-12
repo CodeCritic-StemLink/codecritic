@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import {
   ClerkProvider,
@@ -7,6 +8,9 @@ import {
   SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
+
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,36 +25,55 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "CodeCritic",
-  description: "Peer code review platform. Post your project, get real feedback, earn Karma.",
+  description: "Post your project, get real feedback from other developers, and earn Karma.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // ClerkProvider wraps the whole site so any page can ask who is signed in.
+    // ClerkProvider wraps everything so any page can ask who is signed in.
     <ClerkProvider>
       <html
         lang="en"
+        // The server cannot know which theme the visitor prefers, so next-themes sets it
+        // in the browser. This tells React not to complain about that one difference.
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <body className="min-h-full flex flex-col">
-          <header className="flex items-center justify-between border-b px-6 py-3">
-            <span className="font-semibold">CodeCritic</span>
+        <body className="flex min-h-full flex-col bg-background text-foreground">
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <header className="border-b bg-card">
+              <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-6 py-3">
+                <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+                  <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-primary font-mono text-[12px] text-primary-foreground">
+                    C
+                  </span>
+                  CodeCritic
+                </Link>
 
-            <nav className="flex items-center gap-3">
-              {/* Shown only to visitors who are not logged in. */}
-              <Show when="signed-out">
-                <SignInButton />
-                <SignUpButton />
-              </Show>
+                <nav className="flex items-center gap-2">
+                  <ThemeToggle />
 
-              {/* Shown only to logged in users. Opens the account menu. */}
-              <Show when="signed-in">
-                <UserButton />
-              </Show>
-            </nav>
-          </header>
+                  {/* Shown only to visitors who are not signed in. */}
+                  <Show when="signed-out">
+                    <SignInButton />
+                    <SignUpButton />
+                  </Show>
 
-          {children}
+                  {/* Shown only to signed in users. */}
+                  <Show when="signed-in">
+                    <UserButton />
+                  </Show>
+                </nav>
+              </div>
+            </header>
+
+            {children}
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

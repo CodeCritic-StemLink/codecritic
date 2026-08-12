@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-karma: var(--karma);
+  --color-karma-foreground: var(--karma-foreground);
+  --color-success: var(--success);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
@@ -49,72 +52,109 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* CodeCritic theme. Every colour in the application is one of these.
+     Change a value here and every button, card, tag and focus ring follows.
+     Hex equivalents are in the comments so the design preview and this file agree. */
+
+  --background: oklch(0.978 0.002 197.1);          /* #F6F8F8 */
+  --foreground: oklch(0.204 0.008 211.1);          /* #131819 */
+
+  --card: oklch(1.000 0 0);                        /* #FFFFFF */
+  --card-foreground: oklch(0.204 0.008 211.1);
+  --popover: oklch(1.000 0 0);
+  --popover-foreground: oklch(0.204 0.008 211.1);
+
+  /* Teal. Every action, link and highlight in the app. */
+  --primary: oklch(0.529 0.090 186.8);             /* #0E7C74 */
+  --primary-foreground: oklch(1.000 0 0);
+
+  --secondary: oklch(0.955 0.004 197.1);           /* #EDF1F1 */
+  --secondary-foreground: oklch(0.204 0.008 211.1);
+  --muted: oklch(0.955 0.004 197.1);
+  --muted-foreground: oklch(0.517 0.020 219.9);    /* #5C6B70 */
+
+  --accent: oklch(0.940 0.017 187.9);              /* #DFEFED, tinted teal */
+  --accent-foreground: oklch(0.444 0.075 184.9);
+
+  --destructive: oklch(0.517 0.166 28.7);          /* #B4342A */
+
+  --border: oklch(0.924 0.007 208.8);              /* #E1E7E8 */
+  --input: oklch(0.896 0.008 207.1);
+  --ring: oklch(0.529 0.090 186.8);
+
+  /* Amber means Karma and nothing else, anywhere in the app. */
+  --karma: oklch(0.552 0.115 73.6);                /* #9A6606 */
+  --karma-foreground: oklch(0.949 0.026 82.4);     /* #F7EDDB */
+
+  /* Green means Reviewed. */
+  --success: oklch(0.529 0.106 154.6);             /* #2E7D4F */
+
+  --chart-1: oklch(0.529 0.090 186.8);
+  --chart-2: oklch(0.646 0.075 187.0);
+  --chart-3: oklch(0.552 0.115 73.6);
+  --chart-4: oklch(0.529 0.106 154.6);
+  --chart-5: oklch(0.517 0.020 219.9);
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: oklch(1.000 0 0);
+  --sidebar-foreground: oklch(0.204 0.008 211.1);
+  --sidebar-primary: oklch(0.529 0.090 186.8);
+  --sidebar-primary-foreground: oklch(1.000 0 0);
+  --sidebar-accent: oklch(0.940 0.017 187.9);
+  --sidebar-accent-foreground: oklch(0.444 0.075 184.9);
+  --sidebar-border: oklch(0.924 0.007 208.8);
+  --sidebar-ring: oklch(0.529 0.090 186.8);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* The same ideas at different values. A teal dark enough to read on white is too
+     dark to read on near black, so each theme gets its own version. */
+
+  --background: oklch(0.169 0.007 214.5);          /* #0C1011 */
+  --foreground: oklch(0.940 0.006 211.0);          /* #E7ECED */
+
+  --card: oklch(0.213 0.009 223.9);                /* #151A1C */
+  --card-foreground: oklch(0.940 0.006 211.0);
+  --popover: oklch(0.213 0.009 223.9);
+  --popover-foreground: oklch(0.940 0.006 211.0);
+
+  --primary: oklch(0.732 0.112 183.9);             /* #3FBFB0 */
+  --primary-foreground: oklch(0.167 0.022 179.1);
+
+  --secondary: oklch(0.254 0.011 216.9);           /* #1D2426 */
+  --secondary-foreground: oklch(0.940 0.006 211.0);
+  --muted: oklch(0.254 0.011 216.9);
+  --muted-foreground: oklch(0.699 0.017 216.7);    /* #93A1A5 */
+
+  --accent: oklch(0.277 0.036 186.5);              /* #102E2B */
+  --accent-foreground: oklch(0.795 0.104 184.4);
+
+  --destructive: oklch(0.665 0.148 27.2);          /* #E06B60 */
+
+  --border: oklch(0.282 0.012 214.5);              /* #232B2D */
+  --input: oklch(0.360 0.017 190.7);
+  --ring: oklch(0.732 0.112 183.9);
+
+  --karma: oklch(0.761 0.125 80.1);                /* #DBA84A */
+  --karma-foreground: oklch(0.265 0.028 82.6);     /* #2C2415 */
+
+  --success: oklch(0.719 0.134 151.5);             /* #5CBC79 */
+
+  --chart-1: oklch(0.732 0.112 183.9);
+  --chart-2: oklch(0.640 0.095 185.0);
+  --chart-3: oklch(0.761 0.125 80.1);
+  --chart-4: oklch(0.719 0.134 151.5);
+  --chart-5: oklch(0.699 0.017 216.7);
+
+  --sidebar: oklch(0.213 0.009 223.9);
+  --sidebar-foreground: oklch(0.940 0.006 211.0);
+  --sidebar-primary: oklch(0.732 0.112 183.9);
+  --sidebar-primary-foreground: oklch(0.167 0.022 179.1);
+  --sidebar-accent: oklch(0.277 0.036 186.5);
+  --sidebar-accent-foreground: oklch(0.795 0.104 184.4);
+  --sidebar-border: oklch(0.282 0.012 214.5);
+  --sidebar-ring: oklch(0.732 0.112 183.9);
 }
 
 @layer base {
