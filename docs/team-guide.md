@@ -563,132 +563,109 @@ The best fix is prevention: we split the work by feature, in section 10, so this
 
 ## 9. How we all write code the same way
 
-Four people writing one system. If we each invent our own layout, the code reads like four
-different projects and none of us can explain the other three. These are the rules. They are
-small, and following them costs nothing.
+**The full structure lives in [architecture.md](architecture.md). Read that before writing any
+file.** This section is the short version.
 
-### Back end folder structure
+### The shape of the back end
 
-```
-backend/src/
-  index.ts        the server: middleware, mounts the routers, error handler
-  routes/         one file per resource. HTTP only.
-  services/       the actual logic and the database work. No req or res in here.
-  schemas/        zod schemas, one file per resource. The only place validation is written.
-  lib/            shared helpers: prisma, auth, errors, ranking
-  generated/      Prisma output. Never edit by hand, never commit.
-```
-
-**Why routes and services are separate.** A route that both unpacks an HTTP request and talks to
-the database cannot be tested without pretending to be a web browser. Keep `req` and `res` out of
-services and the logic can be called directly from a test, or reused from a different route later.
-
-The rule to remember: **a route reads the request, calls a service, and sends a response. Nothing
-else.**
-
-### Validation lives in `schemas/`, never inline
-
-One zod schema per thing, exported from its own file, imported by the route.
+A request passes through four hands, and each file has exactly one reason to change:
 
 ```
-backend/src/schemas/submission.ts   ->  createSubmissionSchema
-backend/src/schemas/review.ts       ->  createReviewSchema
-backend/src/schemas/user.ts         ->  profileSchema
+routes/         says which controller handles this path
+controllers/    unpacks the request, validates it, calls a service, sends the response
+services/       the rules, the permissions, the transactions
+repositories/   the only code in the project that calls prisma
 ```
 
-**The rule: if a validation rule appears in `docs/api-design.md`, it must exist in a schema file.**
-Not scattered across if statements in a route. One place to read, one place to change, one place a
-mentor can be shown.
+Plus `models/` for zod schemas, `middlewares/`, `errors/`, `config/` and `utils/`.
 
-Two things zod gives us for free that are worth knowing:
+**The one rule to remember: `req` and `res` never leave the controller, and `prisma` never leaves
+the repository.**
 
-- **It strips fields you did not ask for.** A body containing `karma` loses it before your code
-  runs. That is why nobody can award themselves points.
-- **The error tells you which field failed**, so we can map it to the right error code and the
-  front end can highlight the right input.
+This is the structure taught in the programme's back end classes, so our code reads the way our
+mentors expect it to.
 
-### Front end folder structure
+### The shape of the front end
 
 ```
-frontend/src/
-  app/              pages, one folder per route
-  components/       our own components
-  components/ui/    Shadcn's components. Do not hand edit unless you mean to.
-  lib/api/          one file per resource, plus client.ts
-  lib/store/        zustand stores
+app/           pages
+components/    ours, plus components/ui for shadcn
+constants/     API_URL and anything configured once
+api/           one fetch wrapper. Adds the base URL and the Clerk token.
+services/      getAllSubmissions, createReview, and so on
+store/         zustand
 ```
 
-**One API file per resource**, so four people are not editing the same file:
+A page never calls `fetch` directly. It calls a service, and the service calls `api.ts`.
+
+### Validation
+
+**Every rule in `docs/api-design.md` must exist as a zod schema in `backend/src/models/`.** Not
+scattered across if statements inside a route.
+
+Zod belongs on the **back end**, because that is where the SRS puts it: "All input must be
+validated on the back end, not only in the UI. Mentors will test API endpoints directly, outside
+your front end." Front end checks are for being nice to the user. Back end checks are the actual
+wall.
+
+Zod also strips fields it does not know about, which is why a body containing `"karma": 9999`
+loses it before any of our code runs.
+
+### Errors
+
+One hierarchy, thrown from any layer, caught in one place:
 
 ```
-lib/api/client.ts        the shared fetch wrapper, base URL and auth header. Built once.
-lib/api/submissions.ts   Osini and Aaysha
-lib/api/reviews.ts       Andrew
-lib/api/users.ts         Aqeel
+AppError
+  BadRequestError    400
+  UnauthorizedError  401
+  ForbiddenError     403
+  NotFoundError      404
+  ConflictError      409
 ```
+
+Nobody writes `res.status(403).json(...)` by hand except `error.middleware.ts`.
+
+Wrap every async controller in `catchAsync`. Express 4 does not understand promises, so without
+it a thrown error never reaches the error middleware and the request hangs forever with the
+client seeing nothing.
 
 ### Colours, fonts and radius live in exactly one file
 
-`frontend/src/app/globals.css`.
+`frontend/src/app/globals.css`. Shadcn wrote the whole theme there as CSS variables. Change
+`--primary` once and every button changes.
 
-Shadcn wrote our whole theme in there as CSS variables. Change `--primary` once and every button,
-link and focus ring in the app changes with it.
-
-```css
-:root {
-  --primary: oklch(0.205 0 0);
-  --background: oklch(1 0 0);
-  --radius: 0.625rem;
-}
-```
-
-**Never write a hex code inside a component.** No `bg-[#0e7c74]`, no `style={{ color: "#333" }}`.
-If you need a colour that is not there, add a variable in `globals.css` and use it. Otherwise our
-site ends up with nine slightly different greys and no way to change any of them.
-
-Fonts are the same story: `--font-sans` and `--font-mono`, set once in that file.
-
-### Every endpoint has the same shape
-
-Whoever writes it, the order is:
-
-1. Work out who is calling, from the token, never from the body
-2. Refuse it if they must be signed in and are not
-3. Check the thing exists, 404 if not
-4. Check they are allowed, 403 if not
-5. Validate the body with the schema, 400 if not
-6. Do the work, in a transaction if more than one row changes
-7. Return the created or updated thing
-
-Errors always come back as `{ "error": { "code", "message" } }`. Never a bare string, never HTML.
+**Never write a hex code inside a component.** If a colour is missing, add a variable.
 
 ### Naming
 
 | Thing | Style | Example |
 | --- | --- | --- |
-| Route and helper files | kebab-case | `submissions.ts`, `create-review.ts` |
+| Back end files | `name.layer.ts` | `review.service.ts`, `auth.middleware.ts` |
 | Components | PascalCase | `SubmissionCard.tsx` |
 | Prisma models | Singular | `Review`, not `Reviews` |
-| API paths | Plural | `/submissions`, `/users` |
+| API paths | Plural | `/submissions` |
 | Booleans | Read as a question | `isAuthor`, `hasReviewed` |
 
-### Testing, and what it means for us
+### Testing
 
-We are not adding a big test framework three days from the deadline. What we do instead:
+**Tests live in `backend/tests/`, in a folder that mirrors `src`.** A test for
+`src/services/ranking.service.ts` goes in `tests/services/ranking.service.test.ts`.
 
-**Everyone writes a test section for their own feature** in `docs/test-plan.md`, with the exact
-command and the exact expected result. For an endpoint that is a curl command and the JSON that
-should come back. For a page it is the steps to click and what should appear.
+Two reasons: `src` stays the shipped application and nothing else, and the build physically cannot
+include a test file because they are outside the folder it compiles.
 
-**Everyone runs their own attacks.** The list in section 13 is split across the four of us, each
-person testing the rules on their own feature. You write the command, you run it, you paste the
-result into the test plan.
+Run them with `npm test`, from `backend`. We use Node's own test runner through tsx, so there is
+no test framework installed and no config file to explain.
 
-**One thing does get an automated test:** the ranking function in `backend/src/lib/ranking.ts`.
-It is pure maths with no database in it, so it is easy to test and it is the piece we get
-questioned on hardest. Osini writes it.
+Run `npm run typecheck` before opening a pull request. It checks both `src` and `tests`.
 
-That gives us evidence to show at assessment without spending a day on test setup.
+Not everything gets an automated test. What each person does:
+
+- **Automated unit tests** for pure logic with no database in it. Right now that is the ranking.
+- **Manual API tests** for everything else, written into `docs/test-plan.md` with the exact
+  command, the expected result and the real result.
+- **A shared Postman collection**, so mentors testing our API directly have something to import.
 
 ---
 
