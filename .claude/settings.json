@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch *)",
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(nohup npm run dev)",
+      "Bash(disown)",
+      "Bash(curl -s http://localhost:4000/api/health)",
+      "Bash(curl -s http://localhost:4000/api/users/aqeel_codes)",
+      "Bash(curl -s http://localhost:4000/api/users/nobody_exists)",
+      "Bash(curl -s http://localhost:4000/api/users/andrew_builds)",
+      "Bash(curl -s http://localhost:4000/api/users/maya_dev)",
+      "Bash(curl -s http://localhost:4000/api/users/aaysha_dev)",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\(j.username, j.reviewsGiven, j.insights.averageScoreGiven\\)}\\)\")",
+      "Bash(curl -s http://localhost:4000/api/users/osini_dev)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s http://localhost:4000/api/users/zero_reviews_test)",
+      "Bash(mkdir -p \"c:/Users/azlin/OneDrive/Documents/GitHub/codecritic/frontend/src/app/profile/[username]\")",
+      "Read(//c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/**)",
+      "Bash(sleep 5 && cat /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/frontend-dev.log)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/profile/aqeel_codes)",
+      "Bash(curl -s http://localhost:3000/profile/aqeel_codes)",
+      "Bash(curl -s -o /tmp/profile.html -w \"%{http_code}\\\\n\" http://localhost:3000/profile/aqeel_codes)",
+      "Bash(curl -s -o /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/profile.html -w \"%{http_code}\\\\n\" http://localhost:3000/profile/aqeel_codes)",
+      "Bash(grep -oE '\\(@aqeel_codes|Karma|Reviews given|Reviews received|Node|Express|Prisma|USER_NOT_FOUND\\)' /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/profile.html | sort | uniq -c)",
+      "Bash(curl -s http://localhost:3000/profile/aqeel_codes -o /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/profile.html)",
+      "Bash(grep -o 'aqeel_codes' /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/profile.html | wc -l *)",
+      "Bash(curl -s http://localhost:3000/profile/aqeel_codes -o /c/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/profile2.html)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx playwright *)",
+      "Bash(node \"C:/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad/screenshot.mjs\" \"C:/Users/azlin/AppData/Local/Temp/claude/c--Users-azlin-OneDrive-Documents-GitHub-codecritic/37178663-f71d-46d4-bd24-eccb9af4151e/scratchpad\")",
+      "Bash(npm init *)",
+      "Bash(node screenshot.mjs \".\")",
+      "Bash(node fontcheck.mjs)",
+      "Bash(curl -s http://localhost:4000/api/users/me)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\azlin\\OneDrive\\Documents\\GitHub\\codecritic\\frontend\\src\\app\\profile"
+    ]
+  }
+}
