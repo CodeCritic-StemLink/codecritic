@@ -11,6 +11,7 @@ refined as you build", and they are submitted alongside the repository link.
 | `database-design.md` | The five tables, their columns, their relationships, and the design decisions we reasoned through (Karma as a column, status as a derived value, Rating as its own table). Includes the ER diagram. | Version 1, 2026-08-11 |
 | `api-design.md` | Every endpoint the front end can call, what it expects, what it returns, and which server side validation rules apply to each one. Includes the Feature 01 ranking formula and the plan for proving validation works. | Version 1, 2026-08-11 |
 | `team-guide.md` | **Start here.** The A to Z guide for the whole team: what we are building, how we meet the SRS, how to get set up from nothing, how we use branches and pull requests, who owns what, the plan to the deadline, how deployment works, and what every member must be able to explain. | 2026-08-12 |
+| `architecture.md` | **Read before writing any file.** The folder structure for both halves, what each layer may import, how one request travels through them, the error hierarchy, and the decisions we locked where the SRS and the class notes disagreed. | 2026-08-12 |
 | `test-plan.md` | One section per person. The exact command, the expected result and the real result for every rule on their own feature. This is the evidence we show at assessment. | Started 2026-08-12 |
 
 ## Why these come before the code
