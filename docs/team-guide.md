@@ -649,12 +649,16 @@ client seeing nothing.
 
 ### Testing
 
-**Unit tests sit next to the file they test**, so `ranking.service.ts` and
-`ranking.service.test.ts` are side by side. Two reasons: your test lives in the folder you own, so
-four people are not editing one shared `tests` folder, and a file with no test next to it is
-obvious at a glance.
+**Tests live in `backend/tests/`, in a folder that mirrors `src`.** A test for
+`src/services/ranking.service.ts` goes in `tests/services/ranking.service.test.ts`.
 
-We use Node's own test runner. No framework installed, no config file.
+Two reasons: `src` stays the shipped application and nothing else, and the build physically cannot
+include a test file because they are outside the folder it compiles.
+
+Run them with `npm test`, from `backend`. We use Node's own test runner through tsx, so there is
+no test framework installed and no config file to explain.
+
+Run `npm run typecheck` before opening a pull request. It checks both `src` and `tests`.
 
 Not everything gets an automated test. What each person does:
 

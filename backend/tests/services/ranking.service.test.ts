@@ -1,6 +1,6 @@
 // Tests for the Feature 01 ranking.
 //
-// Run with:  npm run test:ranking
+// Run with:  npm test
 //
 // This file needs no database and no server, because ranking.ts is pure maths. That is
 // the whole reason the scoring lives in its own file.
@@ -16,7 +16,7 @@ import {
   POINTS_PER_MATCHING_TAG,
   MAX_RECENCY_POINTS,
   NEEDS_HELP_POINTS,
-} from "./ranking.service";
+} from "../../src/services/ranking.service";
 
 // A fixed "now" so the tests give the same answer today and next month.
 const NOW = new Date("2026-08-12T12:00:00.000Z");

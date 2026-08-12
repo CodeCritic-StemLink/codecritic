@@ -88,7 +88,6 @@ backend/
       submission.service.ts
       review.service.ts
       ranking.service.ts     Feature 01 scoring, pure maths, no database
-      ranking.service.test.ts
 
     repositories/
       user.repository.ts     the only files allowed to call prisma
@@ -111,7 +110,34 @@ backend/
 
     utils/
       catchAsync.ts          wraps an async handler so thrown errors reach the error middleware
+
+  tests/                     mirrors src. Every test lives here, not next to the code.
+    services/
+      ranking.service.test.ts
+
+  tsconfig.json              builds src into dist. Test files are excluded.
+  tsconfig.test.json         typechecks src and tests together, emits nothing.
 ```
+
+### Where tests live
+
+**A separate `tests/` folder at the root of `backend`, mirroring `src`.** A test for
+`src/services/ranking.service.ts` goes in `tests/services/ranking.service.test.ts`.
+
+Two reasons for a separate folder rather than sitting next to the code:
+
+- **`src` stays the shipped application and nothing else.** Anyone opening `src/services` sees
+  three service files, not three services and three tests.
+- **The build never has to think about it.** `tsconfig.json` compiles `src` into `dist`, and test
+  files are outside it entirely, so nothing can accidentally ship.
+
+The cost is that imports reach back with `../../src/...`, which is the trade we accepted.
+
+Run them with `npm test`. That uses Node's own test runner through tsx, so there is no test
+framework installed and no config file to explain.
+
+`npm run typecheck` checks both `src` and `tests`, using `tsconfig.test.json`. Run it before
+opening a pull request.
 
 ### The import rules
 

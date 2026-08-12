@@ -11,7 +11,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "test:ranking": "tsx src/services/ranking.service.test.ts"
+    "test": "tsx --test \"tests/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json"
   },
   "keywords": [],
   "author": "",
