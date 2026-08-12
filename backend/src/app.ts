@@ -5,6 +5,7 @@ import cors from "cors";
 import { clerkMiddleware } from "@clerk/express";
 
 import { userRoutes } from "./routes/user.routes";
+import { submissionRoutes } from "./routes/submission.routes";
 import { morganMiddleware } from "./middlewares/morgan.middleware";
 import { globalLimiter } from "./middlewares/rateLimiter.middleware";
 import { errorMiddleware, notFoundMiddleware } from "./middlewares/error.middleware";
@@ -56,11 +57,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
-
-// ---------------------------------------------------------------------------
-// /api/submissions goes here. Andrew owns the detail and create routes,
-// Osini owns the feed. Mount submissionRoutes once it exists.
-// ---------------------------------------------------------------------------
+app.use("/api/submissions", submissionRoutes);
 
 // Nothing matched.
 app.use(notFoundMiddleware);
