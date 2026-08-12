@@ -16,7 +16,7 @@ import {
   POINTS_PER_MATCHING_TAG,
   MAX_RECENCY_POINTS,
   NEEDS_HELP_POINTS,
-} from "./ranking";
+} from "./ranking.service";
 
 // A fixed "now" so the tests give the same answer today and next month.
 const NOW = new Date("2026-08-12T12:00:00.000Z");
