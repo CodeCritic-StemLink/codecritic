@@ -1,6 +1,6 @@
 # API design
 
-Version 1, written 2026-08-11, before implementation.
+Version 1, written 2026-08-11 before implementation. Build state updated 2026-08-12.
 
 The back end is Node.js with Express and TypeScript. It talks to PostgreSQL through Prisma.
 The front end never touches the database directly, it only calls the endpoints below.
@@ -62,15 +62,15 @@ Success returns the resource directly. Errors always look like this:
 
 ## 2. Endpoint summary
 
-| Method | Path | Auth | Purpose |
-| --- | --- | --- | --- |
-| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. |
-| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. |
-| POST | `/submissions` | Required | Post a new review request. |
-| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. |
-| GET | `/users/:username` | Optional | Public profile with insights. |
-| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. |
-| PATCH | `/users/me` | Required | Edit your own profile only. |
+| Method | Path | Auth | Purpose | State | Owner |
+| --- | --- | --- | --- | --- | --- |
+| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. | Plain version works, ranking to come | Osini |
+| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | Not built | Andrew |
+| POST | `/submissions` | Required | Post a new review request. | Not built | Andrew |
+| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | Not built | Andrew |
+| GET | `/users/:username` | Optional | Public profile with insights. | Not built | Aqeel |
+| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. | **Built** | Osini |
+| PATCH | `/users/me` | Required | Edit your own profile only. | **Built** | Osini |
 
 ---
 

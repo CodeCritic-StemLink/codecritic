@@ -2,7 +2,7 @@
 
 Everything the four of us need, in one file. Read it once end to end before you touch anything.
 
-Last updated 2026-08-12.
+Last updated 2026-08-12, after the first build session.
 
 ---
 
@@ -16,10 +16,11 @@ Last updated 2026-08-12.
 6. [What actually happens when someone clicks a button](#6-what-actually-happens-when-someone-clicks-a-button)
 7. [Getting set up, from nothing](#7-getting-set-up-from-nothing)
 8. [How we work on GitHub](#8-how-we-work-on-github)
-9. [Who does what](#9-who-does-what)
-10. [The plan to finish](#10-the-plan-to-finish)
-11. [How this gets onto the internet](#11-how-this-gets-onto-the-internet)
-12. [What every one of us must be able to explain](#12-what-every-one-of-us-must-be-able-to-explain)
+9. [How we all write code the same way](#9-how-we-all-write-code-the-same-way)
+10. [Who does what](#10-who-does-what)
+11. [The plan to finish](#11-the-plan-to-finish)
+12. [How this gets onto the internet](#12-how-this-gets-onto-the-internet)
+13. [What every one of us must be able to explain](#13-what-every-one-of-us-must-be-able-to-explain)
 
 ---
 
@@ -61,7 +62,7 @@ the ones we will be questioned on.
 | Back end: Node + Express | Running |
 | ORM: Prisma | Running |
 | Database: SQL relational | PostgreSQL on Neon |
-| Deployment: Vercel plus hosted back end and database | Vercel, Render, Neon. Section 11. |
+| Deployment: Vercel plus hosted back end and database | Vercel, Render, Neon. Section 12. |
 | One shared repository | This one, front end and back end together |
 | Public feed readable logged out | Our auth middleware identifies people without blocking anyone |
 | Posting and reviewing require login | Enforced in the API, not just the UI |
@@ -101,23 +102,55 @@ known in advance. `Rating` holds one score, linked to one review and one criteri
 
 ## 3. What already exists
 
-Pushed to `main` and working:
+State as of 2026-08-12. Everything here is built, tested and on `main`.
 
-**Database.** PostgreSQL 17 on Neon, hosted in Singapore. All five tables created by a migration
-file that lives in the repo, so anyone can rebuild the identical database.
+**Database.** PostgreSQL 17 on Neon, hosted in Singapore. All five tables, created by a migration
+file that lives in the repo so anyone can rebuild the identical database.
 
-**Back end.** Express with TypeScript. Runs on port 4000. Connects to the database through
-Prisma and answers real HTTP requests. Two endpoints exist so far: a health check and a bare
-`GET /submissions` that returns whatever is in the table.
+**Demo data.** `backend/prisma/seed.ts`, run with `npm run seed`. Five users with deliberately
+different tech stacks, ten submissions with overlapping tags and ages from two hours to eight
+days, and fourteen reviews with a rating for every criterion. Four submissions have no reviews on
+purpose, so the Feature 01 needs-help boost has something to lift. Karma is counted from the
+reviews rather than typed in.
 
-**Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand. Runs on port 3000.
-Clerk is wired in: sign in, sign up and the account menu all work.
+**Back end.** Express with TypeScript on port 4000, with:
 
-**Documents.** `docs/database-design.md` and `docs/api-design.md`, both written before the code
-as the SRS demands, plus this guide.
+- CORS, so the site on port 3000 is allowed to call it
+- JSON body parsing
+- Clerk middleware that identifies the caller without blocking anyone, so the public feed still
+  works logged out
+- One error handler, so every failure comes back as `{ "error": { "code", "message" } }` rather
+  than an HTML stack trace
+- A startup check that refuses to run and names any missing environment variable
 
-**What does not exist yet:** every real endpoint, every real page, seed data, the ranking engine,
-and deployment. That is the rest of this document.
+**Endpoints built so far:**
+
+| Endpoint | State |
+| --- | --- |
+| `GET /api/health` | Done |
+| `GET /api/submissions` | Works, but plain. Newest first, no ranking, no filters yet. |
+| `POST /api/users/sync` | Done. Creates or updates our User row from the Clerk identity. |
+| `PATCH /api/users/me` | Done. Edits your own profile only. |
+
+**Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
+is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
+up and account menu.
+
+**Documents.** `database-design.md`, `api-design.md`, `er-diagram.svg` and this guide.
+
+### What does not exist yet
+
+| Missing | Owner |
+| --- | --- |
+| `GET /submissions/:id`, `POST /submissions`, `POST /submissions/:id/reviews` | Andrew |
+| `GET /users/:username` and its insights | Aqeel |
+| The ranking engine and the ranked feed | Osini |
+| Every page: feed, detail, post form, review form, profile | Aaysha |
+| Styled sign in and sign up pages on our own routes | Aaysha |
+| Deployment to Render and Vercel | Osini |
+| A SQL dump committed for long term revival | Osini |
+
+**Nobody is blocked.** Every one of those can be started right now against what already exists.
 
 ---
 
@@ -306,13 +339,22 @@ cd backend
 npm install
 ```
 
-Create a file called `.env` inside `backend` containing one line:
+Create a file called `.env` inside `backend` containing three lines:
 
 ```
 DATABASE_URL="the value Osini sent you"
+CLERK_SECRET_KEY=the sk_test_ key Osini sent
+CLERK_PUBLISHABLE_KEY=the pk_test_ key Osini sent
 ```
 
-Keep the quotes. That file is ignored by git and must never be committed.
+Keep the quotes on `DATABASE_URL`, because a password can contain characters that
+would otherwise be read as the start of a comment. The Clerk keys need no quotes.
+
+Note the back end keys have **no** `NEXT_PUBLIC_` prefix. That prefix is a Next.js
+thing meaning "send this to the browser", and nothing here goes to a browser.
+
+That file is ignored by git and must never be committed. The server refuses to start
+if any of the three is missing, and tells you which.
 
 Then:
 
@@ -455,24 +497,41 @@ a summary, **Commit**, **Publish branch**, **Create Pull Request**.
 
 ### Commit messages
 
-Say what the commit does, in the imperative, as though completing the sentence "this commit will".
+We use **Conventional Commits**. Every message starts with a type, a colon, then what the commit
+does. The type tells a reader at a glance what kind of change it is, without opening the diff.
 
-Good:
+| Type | Use it when |
+| --- | --- |
+| `feat:` | You built something new that a user can see or use |
+| `fix:` | You fixed a bug |
+| `chore:` | Setup, config, dependencies. Not application code. |
+| `style:` | Only formatting or CSS changed. Nothing behaves differently. |
+| `refactor:` | You rewrote code but nothing looks different to a user |
+| `docs:` | README, design documents, comments |
+| `test:` | You added or changed tests |
+
+You can add a scope in brackets when it helps say which area changed.
+
+Real examples from this project:
 
 ```
-Add the review endpoint with full validation
-Block self reviews and duplicate reviews
-Fix the feed showing reviewed posts as pending
+feat: add the seed script with demo users and submissions
+feat(reviews): block self reviews and duplicate reviews
+feat(feed): rank submissions by the user's tech stack
+fix: feed showing reviewed submissions as pending
+chore: install express, prisma and clerk
+docs: add the team guide and ER diagram
+refactor: move the ranking maths into its own module
+style: tidy the spacing on the submission card
 ```
 
-Bad:
+Two rules on top of the type:
 
-```
-update
-fixed stuff
-work
-final final v2
-```
+**Write it in the imperative**, as though completing the sentence "this commit will". So
+`feat: add the review endpoint`, not `added the review endpoint` or `adding review endpoint`.
+
+**The title is enough for small changes.** Add a description underneath when the why is not
+obvious from the title, especially when you made a decision someone might question later.
 
 **Commit small and commit often.** Our assessors look at the history to see that all four of us
 actually contributed. One giant commit at 3am on the last day looks exactly like what it is.
@@ -498,125 +557,250 @@ Git will complain about a conflict. Do not panic and do not delete anything. Pul
 your branch, open the file, and you will see both versions marked. Keep what belongs, remove the
 markers, commit. If it looks bad, ask in the group chat rather than guessing.
 
-The best fix is prevention: we split the work by file, in section 9, so this should be rare.
+The best fix is prevention: we split the work by feature, in section 10, so this should be rare.
 
 ---
 
-## 9. Who does what
+## 9. How we all write code the same way
 
-Split so nobody waits on anybody. Everything in a given column can be built at the same time.
+Four people writing one system. If we each invent our own layout, the code reads like four
+different projects and none of us can explain the other three. These are the rules. They are
+small, and following them costs nothing.
 
-### Aqeel: data and the profile
+### Back end folder structure
 
-**First job, and it is urgent, because everyone else is blocked without it:** the seed script.
-A file at `backend/prisma/seed.ts` that fills the database with realistic fake data.
+```
+backend/src/
+  index.ts        the server: middleware, mounts the routers, error handler
+  routes/         one file per resource. HTTP only.
+  services/       the actual logic and the database work. No req or res in here.
+  schemas/        zod schemas, one file per resource. The only place validation is written.
+  lib/            shared helpers: prisma, auth, errors, ranking
+  generated/      Prisma output. Never edit by hand, never commit.
+```
 
-We need at least:
+**Why routes and services are separate.** A route that both unpacks an HTTP request and talks to
+the database cannot be tested without pretending to be a web browser. Keep `req` and `res` out of
+services and the logic can be called directly from a test, or reused from a different route later.
 
-- 4 or 5 users with different tech stacks, so the ranking is visibly different per person
-- 8 or 10 submissions with varied tags and varied ages, some with zero reviews
-- A dozen reviews with ratings, so profiles have something to count
+The rule to remember: **a route reads the request, calls a service, and sends a response. Nothing
+else.**
 
-Aim for data that makes the demo tell a story. A submission tagged React that is two hours old
-and has no reviews should shoot to the top for a React developer.
+### Validation lives in `schemas/`, never inline
 
-**Second job:** `GET /users/:username`, which is Feature 02. Profile with karma, reviews given,
-reviews received, plus the derived insights. Every figure has to be counted from real rows and
-you have to be able to explain the query.
+One zod schema per thing, exported from its own file, imported by the route.
 
-**Files you own:** `backend/prisma/seed.ts`, `backend/src/routes/users.ts` (the profile route).
+```
+backend/src/schemas/submission.ts   ->  createSubmissionSchema
+backend/src/schemas/review.ts       ->  createReviewSchema
+backend/src/schemas/user.ts         ->  profileSchema
+```
 
-### Andrew: the core API
+**The rule: if a validation rule appears in `docs/api-design.md`, it must exist in a schema file.**
+Not scattered across if statements in a route. One place to read, one place to change, one place a
+mentor can be shown.
 
-The three endpoints that make the site work.
+Two things zod gives us for free that are worth knowing:
 
-1. `GET /submissions/:id`, one request in full with criteria, reviews, ratings and author
-2. `POST /submissions`, with all five validation rules
-3. `POST /submissions/:id/reviews`, the important one
+- **It strips fields you did not ask for.** A body containing `karma` loses it before your code
+  runs. That is why nobody can award themselves points.
+- **The error tells you which field failed**, so we can map it to the right error code and the
+  front end can highlight the right input.
 
-That third endpoint hands out points, so it is the one people will attack. Check things in this
-order so the caller gets the most useful error:
+### Front end folder structure
 
-1. Signed in, else 401
-2. Submission exists, else 404
-3. Reviewer is not the author, else 403
-4. Reviewer has not already reviewed it, else 409
-5. Text fields present and not too long
-6. Ratings cover exactly the submission's criteria
-7. Every score is a whole number 1 to 10
-8. Then write the review, the ratings and the +2 Karma in **one transaction**
+```
+frontend/src/
+  app/              pages, one folder per route
+  components/       our own components
+  components/ui/    Shadcn's components. Do not hand edit unless you mean to.
+  lib/api/          one file per resource, plus client.ts
+  lib/store/        zustand stores
+```
 
-**Files you own:** `backend/src/routes/submissions.ts`, and any validation helpers.
+**One API file per resource**, so four people are not editing the same file:
 
-### Osini: identity, ranking, deployment
+```
+lib/api/client.ts        the shared fetch wrapper, base URL and auth header. Built once.
+lib/api/submissions.ts   Osini and Aaysha
+lib/api/reviews.ts       Andrew
+lib/api/users.ts         Aqeel
+```
 
-1. `POST /users/sync`, which creates our `User` row the first time a Clerk identity appears. This
-   is the gap between "signed in with Clerk" and "exists in our database", and nothing on the
-   site works for a logged in user until it is closed.
-2. The ranking engine, Feature 01, written as its own module at `backend/src/lib/ranking.ts` so
-   Andrew's route can call it without either of you waiting for the other.
-3. `GET /submissions`, the feed, using that module.
-4. Deployment, section 11.
-5. Keeping the documents in `docs/` true as things change.
+### Colours, fonts and radius live in exactly one file
 
-**Files you own:** `backend/src/lib/ranking.ts`, the feed route, the sync route, `docs/`.
+`frontend/src/app/globals.css`.
 
-### Aaysha: the entire front end
+Shadcn wrote our whole theme in there as CSS variables. Change `--primary` once and every button,
+link and focus ring in the app changes with it.
 
-Five pages, all against the agreed API contract. You do not need to wait for the endpoints to
-exist, because the shapes are written down in `docs/api-design.md`.
+```css
+:root {
+  --primary: oklch(0.205 0 0);
+  --background: oklch(1 0 0);
+  --radius: 0.625rem;
+}
+```
 
-1. **Feed**, `/`. The list of requests, with search and tag filters. Shows Pending or Reviewed,
-   tags, author, review count.
-2. **Request detail**, `/submissions/[id]`. Full description, the criteria, and every review with
-   its scores.
-3. **Post a request**, `/submissions/new`. Title, description, repo URL, tags, and criteria the
-   user can add and remove, between 1 and 5.
-4. **Write a review**, on the detail page or its own route. Strengths, improvements, optional
-   links, and a score control for every criterion on that submission.
-5. **Profile**, `/profile/[username]`. Tech stack, bio, GitHub link, Karma, counts, insights.
+**Never write a hex code inside a component.** No `bg-[#0e7c74]`, no `style={{ color: "#333" }}`.
+If you need a colour that is not there, add a variable in `globals.css` and use it. Otherwise our
+site ends up with nine slightly different greys and no way to change any of them.
 
-**Must be responsive on mobile, tablet and desktop.** That is an SRS requirement and it is easy
-to check late and painful to fix late, so check as you go.
+Fonts are the same story: `--font-sans` and `--font-mono`, set once in that file.
 
-**Files you own:** everything under `frontend/src/app` and `frontend/src/components`.
+### Every endpoint has the same shape
 
-### Shared, agree before writing
+Whoever writes it, the order is:
 
-One person writes `frontend/src/lib/api.ts`, a small file holding the fetch calls and the base
-URL, so we do not end up with four different ways of calling the API. Aaysha, since it is her
-folder.
+1. Work out who is calling, from the token, never from the body
+2. Refuse it if they must be signed in and are not
+3. Check the thing exists, 404 if not
+4. Check they are allowed, 403 if not
+5. Validate the body with the schema, 400 if not
+6. Do the work, in a transaction if more than one row changes
+7. Return the created or updated thing
+
+Errors always come back as `{ "error": { "code", "message" } }`. Never a bare string, never HTML.
+
+### Naming
+
+| Thing | Style | Example |
+| --- | --- | --- |
+| Route and helper files | kebab-case | `submissions.ts`, `create-review.ts` |
+| Components | PascalCase | `SubmissionCard.tsx` |
+| Prisma models | Singular | `Review`, not `Reviews` |
+| API paths | Plural | `/submissions`, `/users` |
+| Booleans | Read as a question | `isAuthor`, `hasReviewed` |
+
+### Testing, and what it means for us
+
+We are not adding a big test framework three days from the deadline. What we do instead:
+
+**Everyone writes a test section for their own feature** in `docs/test-plan.md`, with the exact
+command and the exact expected result. For an endpoint that is a curl command and the JSON that
+should come back. For a page it is the steps to click and what should appear.
+
+**Everyone runs their own attacks.** The list in section 13 is split across the four of us, each
+person testing the rules on their own feature. You write the command, you run it, you paste the
+result into the test plan.
+
+**One thing does get an automated test:** the ranking function in `backend/src/lib/ranking.ts`.
+It is pure maths with no database in it, so it is easy to test and it is the piece we get
+questioned on hardest. Osini writes it.
+
+That gives us evidence to show at assessment without spending a day on test setup.
 
 ---
 
-## 10. The plan to finish
+## 10. Who does what
+
+### The principle: one feature each, top to bottom
+
+**Nobody owns "the back end" or "the front end".** Each of us owns one complete feature: its
+endpoint, its page, and its tests.
+
+Three reasons this is the right split:
+
+1. **Everyone touches every layer.** You cannot be the person who only did React and cannot
+   explain a database query, which is exactly what the individual walkthrough catches.
+2. **Features do not depend on each other**, so nobody waits. Aqeel's profile page does not need
+   Andrew's review endpoint to exist.
+3. **At assessment you can walk one whole flow**, from a button, through the API, into the
+   database and back, and you genuinely built all of it.
+
+On day four each of us teaches our slice to the other three. That is how we cover the parts we
+did not write.
+
+### The four slices
+
+**Osini: the feed and Feature 01**
+
+| Layer | Work |
+| --- | --- |
+| Back end | `src/lib/ranking.ts`, and `GET /submissions` with search, tag and status filters |
+| Front end | The feed page, the submission card component, and the "why this order" view |
+| Tests | Automated tests for the ranking maths, plus proof the order changes per user |
+
+**Aaysha: posting a request**
+
+| Layer | Work |
+| --- | --- |
+| Back end | `POST /submissions`, with all five validation rules |
+| Front end | `/submissions/new`, with criteria you can add and remove between 1 and 5. Plus styled sign in and sign up pages on our own routes, and the call to `POST /users/sync` after a first sign in. |
+| Tests | Empty title rejected, six criteria rejected, bad repo URL rejected, no tags rejected, no token rejected |
+
+**Andrew: reviewing**
+
+| Layer | Work |
+| --- | --- |
+| Back end | `GET /submissions/:id`, and `POST /submissions/:id/reviews` with the Karma transaction |
+| Front end | The submission detail page and the review form with a score control per criterion |
+| Tests | Self review 403, duplicate review 409, score of 11 rejected, missing criterion rejected, and Karma unchanged after every failure |
+
+**Aqeel: profiles and reputation**
+
+| Layer | Work |
+| --- | --- |
+| Back end | `GET /users/:username` with the insights, which is Feature 02 |
+| Front end | `/profile/[username]`, showing stack, bio, GitHub link, Karma, both counts and the insights |
+| Tests | Counts correct against the seed data, and reviews received proven different from reviews given |
+
+### The shared foundation, already built
+
+These exist on `main` and belong to nobody in particular. If you need to change one, say so in
+the group chat first, because all four of us depend on them.
+
+- `backend/src/lib/prisma.ts`, `auth.ts`, `errors.ts`
+- `backend/prisma/seed.ts`
+- `backend/src/index.ts`, the middleware chain
+- `POST /users/sync` and `PATCH /users/me`
+- `frontend/src/app/layout.tsx` and `src/proxy.ts`
+
+One piece is still missing and everybody needs it: **`frontend/src/lib/api/client.ts`**, the shared
+fetch wrapper that adds the base URL and the Clerk token. Aaysha builds it first thing, pushes it
+on its own small pull request, and then nobody touches it again.
+
+### How we avoid editing the same lines
+
+| File | Rule |
+| --- | --- |
+| `backend/src/routes/users.ts` | Osini owns sync and me. Aqeel adds the profile route below the marked comment. |
+| `frontend/src/lib/api/` | One file per resource. Never put two people's calls in one file. |
+| `frontend/src/app/globals.css` | Theme changes only, and say so in the chat first. Everyone renders through it. |
+| `backend/prisma/schema.prisma` | Schema changes go through the group. A migration nobody expected breaks three machines. |
+
+---
+
+## 11. The plan to finish
 
 Deadline is around 2026-08-15.
 
-### Today, 12 August: everything works locally
+### 12 August: everything works locally
+
+Start here when you wake up. Nothing in this list is waiting on anything else.
+
+| Who | First thing to do | Done means by tonight |
+| --- | --- | --- |
+| Aaysha | `frontend/src/lib/api/client.ts`, pushed on its own small PR because everyone needs it | Client done, then `POST /submissions` working, then the post form rendering |
+| Andrew | `GET /submissions/:id` | Both endpoints working, the Karma transaction correct, tested with curl |
+| Aqeel | `GET /users/:username` | Profile returns Karma, both counts and the insights, every figure counted from real rows |
+| Osini | `backend/src/lib/ranking.ts` | Feed visibly reordered per user, with the score breakdown available |
+
+Aaysha's API client is the one thing several people want early, so it goes first and gets its own
+pull request within the first hour.
+
+### 13 August: everything is connected
 
 | Who | Done means |
 | --- | --- |
-| Aqeel | Seed script written and run. The database has realistic data. `GET /submissions` returns real rows. |
-| Andrew | All three endpoints working, every validation rule enforced, tested by hand |
-| Osini | `/users/sync` working, ranking module written and the feed reordering |
-| Aaysha | Feed and detail pages rendering real data from the API |
-
-**The seed script is the critical path.** Aqeel starts there and tells the group the moment it is
-pushed, because until it exists everyone else is testing against an empty screen.
-
-### Tomorrow, 13 August: everything is connected
-
-| Who | Done means |
-| --- | --- |
-| Aqeel | Profile endpoint with insights |
-| Andrew | Every endpoint attack tested, section 12's list |
-| Osini | Feed order visibly different per user, with a "why this order" view |
-| Aaysha | All five pages working end to end, responsive on all three sizes |
+| Andrew | Every endpoint attack tested against the list in section 13 |
+| Aqeel | Profile queries explainable out loud, insights correct |
+| Osini | Feature 01 finished with a "why this order" view, ready to present separately |
+| Aaysha | All five pages working end to end, responsive on mobile, tablet and desktop |
 
 ### 14 August: deployed and rehearsed
 
-Deploy all three parts, run through the whole site on the real URL, and every one of us walks the
+Deploy all three parts, walk the whole site on the real URL, and every one of us explains the
 entire system out loud to the other three. Not the part you wrote. The whole thing.
 
 ### 15 August: submit
@@ -625,7 +809,7 @@ Deployed link, repository link, design documents. Everyone submits from their ow
 
 ---
 
-## 11. How this gets onto the internet
+## 12. How this gets onto the internet
 
 Three separate things get hosted.
 
@@ -686,7 +870,7 @@ rebuild the whole thing from the repository alone.
 
 ---
 
-## 12. What every one of us must be able to explain
+## 13. What every one of us must be able to explain
 
 We are each examined individually on the **whole** system, including the parts we did not write.
 Code you cannot explain or change on the spot earns nothing.
