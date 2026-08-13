@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 
 import { getProfile } from "@/services/user.service";
 import { Badge } from "@/components/ui/badge";
+import { ReviewCard } from "@/components/ReviewCard";
 import { ApiError } from "@/api/api";
+import { timeAgo } from "@/lib/utils";
 
 // A public profile. This page is Feature 02.
 //
@@ -15,6 +17,12 @@ import { ApiError } from "@/api/api";
 // panels for the insights. Reviews by month is not in the preview but the figure is
 // still part of the contract in docs/api-design.md, so it gets a third panel in the
 // same visual language rather than being dropped.
+//
+// The container is wider than the feed's max-w-3xl on purpose: a single column of
+// short cards reads fine narrow, but this page also has to fit two columns of
+// insight panels and, now, full review text. At max-w-3xl on a real desktop monitor
+// that left several hundred pixels of dead grey on both sides. max-w-6xl fills a
+// 1440px screen sensibly while still stacking to one column on tablet and phone.
 
 /** "2026-08" becomes "Aug 2026". */
 function formatMonth(month: string): string {
@@ -23,17 +31,6 @@ function formatMonth(month: string): string {
     month: "short",
     year: "numeric",
   });
-}
-
-/** "2h ago", "3 days ago". Same rule the feed cards use. */
-function timeAgo(iso: string): string {
-  const hours = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60));
-
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.round(hours / 24);
-  return days === 1 ? "1 day ago" : `${days} days ago`;
 }
 
 function reviewLabel(count: number): string {
@@ -59,7 +56,7 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
 
   if (failure || !profile) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-6 py-16">
+      <main className="mx-auto w-full max-w-6xl px-6 py-16">
         <h1 className="text-xl font-semibold">This profile could not load</h1>
         <p className="mt-2 text-sm text-muted-foreground">{failure}</p>
       </main>
@@ -74,7 +71,7 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
   const initial = profile.username.charAt(0).toUpperCase();
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <main className="mx-auto w-full max-w-6xl px-6 py-10">
       <Link
         href="/"
         className="text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
@@ -82,7 +79,7 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
         Back to the feed
       </Link>
 
-      <div className="mt-4 grid gap-5 md:grid-cols-[1fr_300px] md:items-start">
+      <div className="mt-4 grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <div>
           <div className="flex items-center gap-4">
             <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border bg-accent text-[22px] font-semibold text-primary">
@@ -180,6 +177,39 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
                     {timeAgo(submission.createdAt)} · {reviewLabel(submission.reviewCount)}
                   </p>
                 </Link>
+              ))}
+            </div>
+          )}
+
+          {/*
+            The SRS asks that a user can manage "reviews they have given, and reviews
+            they have received", not just see the counts. These two sections are that:
+            the full text of every review, not just a number.
+          */}
+          <h2 className="mt-7 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Reviews written
+          </h2>
+
+          {profile.reviewsGivenList.length === 0 ? (
+            <p className="mt-2.5 text-[13px] text-muted-foreground">Has not written a review yet.</p>
+          ) : (
+            <div className="mt-2.5 flex flex-col gap-2.5">
+              {profile.reviewsGivenList.map((review) => (
+                <ReviewCard key={review.id} review={review} />
+              ))}
+            </div>
+          )}
+
+          <h2 className="mt-7 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Reviews received
+          </h2>
+
+          {profile.reviewsReceivedList.length === 0 ? (
+            <p className="mt-2.5 text-[13px] text-muted-foreground">Has not received a review yet.</p>
+          ) : (
+            <div className="mt-2.5 flex flex-col gap-2.5">
+              {profile.reviewsReceivedList.map((review) => (
+                <ReviewCard key={review.id} review={review} showReviewer />
               ))}
             </div>
           )}
