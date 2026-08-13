@@ -24,6 +24,31 @@ const feedInclude = {
 
 export type SubmissionForFeed = Prisma.SubmissionGetPayload<{ include: typeof feedInclude }>;
 
+/**
+ * What the detail page needs: the full author profile, every review with its
+ * reviewer and ratings. Kept separate from feedInclude because the feed page never
+ * needs a submission's reviews and asking for them on every feed row would be a lot
+ * of wasted data for a page that shows twenty submissions at once.
+ */
+const detailInclude = {
+  author: {
+    select: { username: true, karma: true, techStack: true },
+  },
+  criteria: {
+    orderBy: { position: "asc" },
+    select: { id: true, label: true, position: true },
+  },
+  reviews: {
+    orderBy: { createdAt: "desc" },
+    include: {
+      reviewer: { select: { username: true, karma: true } },
+      ratings: { select: { criterionId: true, score: true } },
+    },
+  },
+} satisfies Prisma.SubmissionInclude;
+
+export type SubmissionWithReviews = Prisma.SubmissionGetPayload<{ include: typeof detailInclude }>;
+
 export type FeedFilters = {
   search?: string;
   tag?: string;
@@ -75,10 +100,19 @@ export const submissionRepository = {
     });
   },
 
+  /** One submission in the feed shape: enough to check authorId and criteria, nothing about reviews. */
   findById(id: string): Promise<SubmissionForFeed | null> {
     return prisma.submission.findUnique({
       where: { id },
       include: feedInclude,
+    });
+  },
+
+  /** One submission in full, for the detail page: every review, every rating. */
+  findByIdWithReviews(id: string): Promise<SubmissionWithReviews | null> {
+    return prisma.submission.findUnique({
+      where: { id },
+      include: detailInclude,
     });
   },
 };

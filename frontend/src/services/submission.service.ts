@@ -47,6 +47,49 @@ export type FeedFilters = {
   status?: "pending" | "reviewed";
   page?: number;
 };
+// --- add below the existing FeedFilters / getFeed code ---
+
+/** One score on the detail page: the criterion's own label, so the front end never
+ * has to join it back against a separate criteria list. */
+export type ReviewRating = {
+  criterionId: string;
+  label: string;
+  score: number;
+};
+
+export type SubmissionReview = {
+  id: string;
+  strengths: string;
+  improvements: string;
+  resources: string[];
+  createdAt: string;
+  reviewer: { username: string; karma: number };
+  ratings: ReviewRating[];
+};
+
+export type SubmissionDetail = {
+  id: string;
+  title: string;
+  description: string;
+  repoUrl: string;
+  tags: string[];
+  createdAt: string;
+  author: { username: string; karma: number; techStack: string[] };
+  status: "pending" | "reviewed";
+  criteria: Criterion[];
+  reviews: SubmissionReview[];
+  /** Whether this signed in viewer wrote the submission, and whether they already reviewed it. */
+  viewer: { isAuthor: boolean; hasReviewed: boolean };
+};
+
+/**
+ * One review request in full: criteria, every review, every rating. Optional auth,
+ * same as the feed — a visitor can read a request without an account, and a signed in
+ * viewer additionally gets the two flags that decide whether to show the review form.
+ */
+export function getSubmission(id: string, token?: string | null): Promise<SubmissionDetail> {
+  return apiFetch<SubmissionDetail>(`/submissions/${id}`, { token });
+}
 
 /**
  * The feed.
