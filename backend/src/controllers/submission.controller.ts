@@ -1,12 +1,27 @@
 import type { Request, Response } from "express";
+import { z } from "zod";
 
 import { submissionService } from "../services/submission.service";
-import { getOptionalUser } from "../middlewares/auth.middleware";
-import { feedQuerySchema } from "../models/submission.schema";
+import { getOptionalUser, requireUser } from "../middlewares/auth.middleware";
+import {
+  feedQuerySchema,
+  createSubmissionSchema,
+  createSubmissionErrorCodes,
+} from "../models/submission.schema";
 import { BadRequestError } from "../errors/appError";
+import type { ErrorCode } from "../errors/appError";
 
 // Controllers unpack the request, validate it, call a service, send the response.
 // No database calls and no rules here. See docs/architecture.md.
+
+/** Turns a zod failure into our error shape, with the code matching the field that failed. */
+function toBadRequest(error: z.ZodError): BadRequestError {
+  const issue = error.issues[0];
+  const field = issue?.path[0] as keyof typeof createSubmissionErrorCodes;
+  const code: ErrorCode = createSubmissionErrorCodes[field] ?? "INVALID_TITLE";
+
+  return new BadRequestError(issue?.message ?? "That request is not valid.", code);
+}
 
 export const submissionController = {
   /**
@@ -30,5 +45,26 @@ export const submissionController = {
     const result = await submissionService.getFeed(viewer, parsed.data);
 
     res.json(result);
+  },
+
+  /**
+   * POST /api/submissions
+   *
+   * requireUser throws 401 with no token, and 404 USER_NOT_FOUND if the caller is known
+   * to Clerk but has never called POST /users/sync — either way, execution stops before
+   * validation runs, so an anonymous caller cannot even discover what the field rules are.
+   */
+  async create(req: Request, res: Response) {
+    const author = await requireUser(req);
+
+    const parsed = createSubmissionSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      throw toBadRequest(parsed.error);
+    }
+
+    const submission = await submissionService.createSubmission(author, parsed.data);
+
+    res.status(201).json(submission);
   },
 };

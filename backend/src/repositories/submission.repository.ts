@@ -81,4 +81,31 @@ export const submissionRepository = {
       include: feedInclude,
     });
   },
+
+  /**
+   * Creates a submission and its criteria in one write.
+   *
+   * Nested create, not two separate calls: Prisma sends this as one statement, so there
+   * is no window where a submission could exist with zero criteria because the second
+   * call never ran. `criteria` arrives already validated and ordered by
+   * models/submission.schema.ts; `position` here is just that array index.
+   */
+  create(
+    authorId: string,
+    input: { title: string; description: string; repoUrl: string; tags: string[]; criteria: string[] }
+  ): Promise<SubmissionForFeed> {
+    return prisma.submission.create({
+      data: {
+        title: input.title,
+        description: input.description,
+        repoUrl: input.repoUrl,
+        tags: input.tags,
+        authorId,
+        criteria: {
+          create: input.criteria.map((label, position) => ({ label, position })),
+        },
+      },
+      include: feedInclude,
+    });
+  },
 };
