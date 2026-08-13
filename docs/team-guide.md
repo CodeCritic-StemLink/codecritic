@@ -711,14 +711,23 @@ client seeing nothing.
 Two reasons: `src` stays the shipped application and nothing else, and the build physically cannot
 include a test file because they are outside the folder it compiles.
 
-Run them with `npm test`, from `backend`. We use Node's own test runner through tsx, so there is
-no test framework installed and no config file to explain.
+Run them with `npm test`, from `backend`. We use Jest, because that is what the programme
+teaches. `jest.config.js` points it at `tests/`. Jest runs test files through `@swc/jest`, not
+`ts-jest`: this project is on TypeScript 7, which does not expose the Compiler API `ts-jest`
+needs, and swc strips types without type-checking, which is fine because `npm run typecheck`
+already covers that separately.
 
 Run `npm run typecheck` before opening a pull request. It checks both `src` and `tests`.
 
+The tests must keep running with no `DATABASE_URL` set. That is what makes them runnable
+anywhere, including a fresh clone or CI, without a live database. Every test file is pure logic
+with no Prisma import, the same reason `ranking.service.ts` and `insights.service.ts` stand alone
+from their repositories.
+
 Not everything gets an automated test. What each person does:
 
-- **Automated unit tests** for pure logic with no database in it. Right now that is the ranking.
+- **Automated unit tests** for pure logic with no database in it. Right now that is the ranking
+  (Feature 01) and the profile insight counting (Feature 02).
 - **Manual API tests** for everything else, written into `docs/test-plan.md` with the exact
   command, the expected result and the real result.
 - **A shared Postman collection**, so mentors testing our API directly have something to import.
