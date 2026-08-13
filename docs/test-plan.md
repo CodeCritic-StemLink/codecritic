@@ -204,9 +204,18 @@ Next.js 1, TypeScript 1, PostgreSQL 1.
 
 Actual:
 
-    "reviewsByTag":[{"tag":"Node","count":2},{"tag":"Express","count":1},{"tag":"Prisma","count":1},
-    {"tag":"Python","count":1},{"tag":"Django","count":1},{"tag":"Next.js","count":1},
-    {"tag":"TypeScript","count":1},{"tag":"PostgreSQL","count":1}]
+```json
+"reviewsByTag": [
+  { "tag": "Node", "count": 2 },
+  { "tag": "Express", "count": 1 },
+  { "tag": "Prisma", "count": 1 },
+  { "tag": "Python", "count": 1 },
+  { "tag": "Django", "count": 1 },
+  { "tag": "Next.js", "count": 1 },
+  { "tag": "TypeScript", "count": 1 },
+  { "tag": "PostgreSQL", "count": 1 }
+]
+```
 
 Matches exactly. Also checked `averageScoreGiven` by hand: the nine ratings across those four
 reviews are 8, 6, 7, 5, 7, 6, 7, 7, 4, summing to 57. 57 / 9 = 6.333, rounded to one decimal is
@@ -225,10 +234,19 @@ Command:
 
 Actual:
 
-    {"username":"zero_reviews_test","bio":null,"techStack":["Go"],"githubUrl":null,"karma":0,
-    "reviewsGiven":0,"reviewsReceived":0,
-    "insights":{"reviewsByTag":[],"reviewsByMonth":[],"averageScoreGiven":null},
-    "submissions":[]}
+```json
+{
+  "username": "zero_reviews_test",
+  "bio": null,
+  "techStack": ["Go"],
+  "githubUrl": null,
+  "karma": 0,
+  "reviewsGiven": 0,
+  "reviewsReceived": 0,
+  "insights": { "reviewsByTag": [], "reviewsByMonth": [], "averageScoreGiven": null },
+  "submissions": []
+}
+```
 
 No error, no crash. `averageScoreGiven` comes back `null` rather than `0`, so the front end can
 tell "never rated anything" apart from "rated everything a zero". The profile page checks

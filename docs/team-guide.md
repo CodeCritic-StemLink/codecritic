@@ -143,10 +143,10 @@ up and account menu.
 
 | Missing | Owner |
 | --- | --- |
-| `GET /submissions/:id`, `POST /submissions`, `POST /submissions/:id/reviews` | Andrew |
+| `POST /submissions`, with its validation rules, and the `/submissions/new` post form | Aaysha |
+| `GET /submissions/:id`, `POST /submissions/:id/reviews` with the Karma transaction, the detail page and the review form | Andrew |
 | The ranking engine and the ranked feed | Osini, done |
 | `GET /users/:username`, its insights, and the `/profile/[username]` page | Aqeel, done |
-| Every remaining page: detail, post form, review form | Aaysha |
 | Styled sign in and sign up pages on our own routes | Aaysha |
 | Deployment to Render and Vercel | Osini |
 | A SQL dump committed for long term revival | Osini |
