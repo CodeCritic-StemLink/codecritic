@@ -10,10 +10,15 @@ import { usePathname } from "next/navigation";
 
 type Props = {
   /**
-   * Where "My requests" and "My reviews" point, both to the owner's own profile since
-   * that page already lists what they have posted and their review counts. Undefined
-   * when nobody is signed in (or not synced yet), in which case only Browse shows,
-   * same as the logged out feed in the design preview.
+   * Where "My profile" points. Undefined when nobody is signed in (or not synced
+   * yet), in which case only Browse shows, same as the logged out feed in the design
+   * preview.
+   *
+   * The design preview shows separate "My requests" and "My reviews" links, but both
+   * would point at the same page today: the profile page already lists what someone
+   * has posted and their review counts, and there is no dedicated requests-only or
+   * reviews-only page yet. Two links to one destination is worse than one, so this
+   * is a single "My profile" link until those pages exist.
    */
   username?: string;
 };
@@ -23,12 +28,7 @@ export function NavLinks({ username }: Props) {
 
   const links = [
     { label: "Browse", href: "/" },
-    ...(username
-      ? [
-          { label: "My requests", href: `/profile/${username}` },
-          { label: "My reviews", href: `/profile/${username}` },
-        ]
-      : []),
+    ...(username ? [{ label: "My profile", href: `/profile/${username}` }] : []),
   ];
 
   return (

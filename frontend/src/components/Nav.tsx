@@ -5,7 +5,6 @@ import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
 import { getMe } from "@/services/user.service";
-import { ApiError } from "@/api/api";
 
 // The navbar. Matches the agreed design preview: brand mark, Browse (always), My
 // requests / My reviews once we know who somebody is, a karma chip, a Post a request
@@ -23,14 +22,17 @@ export async function Nav() {
   if (userId) {
     const token = await getToken();
 
-    try {
-      const { user } = await getMe(token ?? "");
-      me = { username: user.username, karma: user.karma };
-    } catch (error) {
-      // Signed in to Clerk but POST /users/sync has never run for this identity.
-      // Nothing to show beyond the account menu until they finish that.
-      if (!(error instanceof ApiError && error.code === "USER_NOT_FOUND")) {
-        throw error;
+    // The karma chip is not worth breaking a page over. If there is no token, the
+    // API is unreachable, the token has expired, or the row does not exist yet
+    // because POST /users/sync has never run, render the nav without it rather than
+    // taking the whole site down. Nav runs on every route from the root layout, so a
+    // rethrown error here is a crashed site, not a missing chip.
+    if (token) {
+      try {
+        const { user } = await getMe(token);
+        me = { username: user.username, karma: user.karma };
+      } catch {
+        // Swallowed on purpose. See above.
       }
     }
   }
