@@ -6,6 +6,7 @@ import { getFeed } from "@/services/submission.service";
 import { SubmissionCard } from "@/components/SubmissionCard";
 import { FeedFilters } from "@/components/FeedFilters";
 import { FeedSearch } from "@/components/FeedSearch";
+import { FeedPagination } from "@/components/FeedPagination";
 import { FeedSidebar } from "@/components/FeedSidebar";
 import { feedUrl } from "@/lib/feedUrl";
 import type { FeedParams } from "@/lib/feedUrl";
@@ -37,7 +38,12 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
 
   try {
     feed = await getFeed(
-      { search: params.search, tag: params.tag, status: params.status },
+      {
+        search: params.search,
+        tag: params.tag,
+        status: params.status,
+        page: params.page ? Number(params.page) : undefined,
+      },
       token
     );
   } catch (error) {
@@ -60,7 +66,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
   // technologies we do not know.
   const needsProfile = Boolean(userId) && !feed.personalised;
 
-  const isFiltered = Boolean(params.search || params.tag || params.status);
+  const isFiltered = Boolean(params.search || params.tag || params.status || params.page);
 
   return (
     <main className="mx-auto w-full max-w-[1440px] px-6 py-8">
@@ -89,7 +95,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
         The explicit col-start values only kick in at xl, where the filter rail moves
         from a row of chips at the top into its own column on the left.
       */}
-      <div className="grid items-start gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[190px_minmax(0,1fr)_300px]">
+      <div className="grid gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[190px_minmax(0,1fr)_300px]">
         <div className="lg:col-span-2 xl:col-span-1 xl:col-start-1 xl:row-start-1">
           <FeedFilters submissions={feed.submissions} params={params} />
         </div>
@@ -151,6 +157,13 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
               ))}
             </div>
           )}
+
+          <FeedPagination
+            page={feed.page}
+            limit={feed.limit}
+            total={feed.total}
+            params={params}
+          />
         </div>
 
         <div className="lg:col-start-2 xl:col-start-3 xl:row-start-1">

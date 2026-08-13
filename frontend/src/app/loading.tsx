@@ -16,7 +16,7 @@ export default function FeedLoading() {
         Loading the feed
       </p>
 
-      <div className="grid items-start gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[190px_minmax(0,1fr)_300px]">
+      <div className="grid gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1fr)_290px] xl:grid-cols-[190px_minmax(0,1fr)_300px]">
         <div className="lg:col-span-2 xl:col-span-1 xl:col-start-1 xl:row-start-1">
           <div className="flex gap-2 xl:flex-col xl:gap-1.5">
             <Skeleton className="h-8 w-32 shrink-0" />
