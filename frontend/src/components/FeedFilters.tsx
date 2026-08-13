@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CircleCheck, CircleDashed, Layers, Tag, X } from "lucide-react";
 
 import { feedUrl } from "@/lib/feedUrl";
+import { popularTags } from "@/lib/tags";
 import type { FeedParams } from "@/lib/feedUrl";
 import type { FeedItem } from "@/services/submission.service";
 
@@ -9,11 +10,20 @@ import type { FeedItem } from "@/services/submission.service";
 //
 // The tag list is counted from the submissions already on the page. No new endpoint
 // and no second request: the feed response has every tag on it, so counting them here
-// costs nothing and the numbers are always true for what is actually showing.
+// costs nothing.
+//
+// It is headed "In these results" rather than "Technologies" because that is exactly
+// what it is. It counts the current page of the current filter, so picking a tag
+// narrows the list to that tag's neighbours, and a long feed shows the tags of page
+// one. Calling it "Technologies" would imply totals across the whole site, which
+// would need a counting endpoint the SRS never asked for.
 //
 // On phones and tablets this same component renders as a row of chips that scrolls
 // sideways, which is why the markup is a flat list of links rather than a sidebar
 // shape. One component, two layouts, decided entirely by CSS.
+//
+// The counting itself lives in lib/tags.ts, so it can be unit tested without
+// rendering this component. See tests/lib/tags.test.ts.
 
 const MAX_TAGS = 8;
 
@@ -22,24 +32,8 @@ type Props = {
   params: FeedParams;
 };
 
-/** The most common technologies in the current feed, most used first. */
-function popularTags(submissions: FeedItem[]): Array<{ tag: string; count: number }> {
-  const counts = new Map<string, number>();
-
-  for (const submission of submissions) {
-    for (const tag of submission.tags) {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-
-  return [...counts.entries()]
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
-    .slice(0, MAX_TAGS);
-}
-
 export function FeedFilters({ submissions, params }: Props) {
-  const tags = popularTags(submissions);
+  const tags = popularTags(submissions, MAX_TAGS);
 
   const states = [
     { label: "All requests", value: undefined, Icon: Layers },
@@ -86,7 +80,7 @@ export function FeedFilters({ submissions, params }: Props) {
       {tags.length > 0 ? (
         <div className="mt-5 hidden xl:block">
           <p className="mb-2 font-mono text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Technologies
+            In these results
           </p>
 
           <ul className="flex flex-col gap-0.5">
