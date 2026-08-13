@@ -7,9 +7,6 @@
 // in its own file, insights.service.ts, with no Prisma import, the same way
 // ranking.service.ts does for Feature 01.
 
-import { test } from "node:test";
-import assert from "node:assert/strict";
-
 import { buildInsights } from "../../src/services/insights.service";
 import type { ReviewGivenForInsights } from "../../src/repositories/user.repository";
 
@@ -29,19 +26,19 @@ function review(
 test("nobody has ever reviewed: empty insights, null average, not zero", () => {
   const insights = buildInsights([]);
 
-  assert.deepEqual(insights.reviewsByTag, []);
-  assert.deepEqual(insights.reviewsByMonth, []);
-  assert.equal(insights.averageScoreGiven, null);
+  expect(insights.reviewsByTag).toEqual([]);
+  expect(insights.reviewsByMonth).toEqual([]);
+  expect(insights.averageScoreGiven).toBe(null);
 });
 
 test("one review counts each of its tags once and averages its own scores", () => {
   const insights = buildInsights([review(["Node", "Express"], [8, 6], "2026-08-11T10:00:00.000Z")]);
 
-  assert.deepEqual(insights.reviewsByTag, [
+  expect(insights.reviewsByTag).toEqual([
     { tag: "Node", count: 1 },
     { tag: "Express", count: 1 },
   ]);
-  assert.equal(insights.averageScoreGiven, 7);
+  expect(insights.averageScoreGiven).toBe(7);
 });
 
 test("the same tag across two reviews adds up, not two separate entries", () => {
@@ -50,7 +47,7 @@ test("the same tag across two reviews adds up, not two separate entries", () => 
     review(["Node", "Prisma"], [7], "2026-08-02T10:00:00.000Z"),
   ]);
 
-  assert.deepEqual(insights.reviewsByTag, [
+  expect(insights.reviewsByTag).toEqual([
     { tag: "Node", count: 2 },
     { tag: "Prisma", count: 1 },
   ]);
@@ -64,7 +61,7 @@ test("reviewsByTag is sorted highest count first", () => {
     review(["Node"], [5], "2026-08-04T10:00:00.000Z"),
   ]);
 
-  assert.deepEqual(insights.reviewsByTag.map((t) => t.tag), ["Node", "Rust"]);
+  expect(insights.reviewsByTag.map((t) => t.tag)).toEqual(["Node", "Rust"]);
 });
 
 test("reviews are grouped by calendar month regardless of the day", () => {
@@ -74,7 +71,7 @@ test("reviews are grouped by calendar month regardless of the day", () => {
     review(["Node"], [5], "2026-08-01T00:00:00.000Z"),
   ]);
 
-  assert.deepEqual(insights.reviewsByMonth, [
+  expect(insights.reviewsByMonth).toEqual([
     { month: "2026-07", count: 2 },
     { month: "2026-08", count: 1 },
   ]);
@@ -87,10 +84,7 @@ test("reviewsByMonth is sorted chronologically, not by insertion order", () => {
     review(["Node"], [5], "2026-07-05T10:00:00.000Z"),
   ]);
 
-  assert.deepEqual(
-    insights.reviewsByMonth.map((m) => m.month),
-    ["2026-06", "2026-07", "2026-08"]
-  );
+  expect(insights.reviewsByMonth.map((m) => m.month)).toEqual(["2026-06", "2026-07", "2026-08"]);
 });
 
 test("averageScoreGiven is the mean of every rating across every review, rounded to one decimal", () => {
@@ -102,11 +96,11 @@ test("averageScoreGiven is the mean of every rating across every review, rounded
     review(["PostgreSQL", "Node"], [7, 4], "2026-08-04T10:00:00.000Z"),
   ]);
 
-  assert.equal(insights.averageScoreGiven, 6.3);
+  expect(insights.averageScoreGiven).toBe(6.3);
 });
 
 test("a review with no ratings does not break the average", () => {
   const insights = buildInsights([review(["Node"], [], "2026-08-01T10:00:00.000Z")]);
 
-  assert.equal(insights.averageScoreGiven, null);
+  expect(insights.averageScoreGiven).toBe(null);
 });
