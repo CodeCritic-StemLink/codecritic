@@ -20,9 +20,11 @@ import { timeAgo } from "@/lib/utils";
 //
 // The container is wider than the feed's max-w-3xl on purpose: a single column of
 // short cards reads fine narrow, but this page also has to fit two columns of
-// insight panels and, now, full review text. At max-w-3xl on a real desktop monitor
-// that left several hundred pixels of dead grey on both sides. max-w-6xl fills a
-// 1440px screen sensibly while still stacking to one column on tablet and phone.
+// insight panels and, now, full review text. max-w-3xl and even max-w-6xl both left
+// hundreds of pixels of dead grey on a real 1600px+ monitor, confirmed by measuring
+// the rendered width, not just eyeballing a screenshot. max-w-[1440px] is deliberately
+// a pixel value rather than a Tailwind step, chosen to keep the margin reasonable on
+// a wide monitor without the two-column grid ever looking stretched.
 
 /** "2026-08" becomes "Aug 2026". */
 function formatMonth(month: string): string {
@@ -56,7 +58,7 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
 
   if (failure || !profile) {
     return (
-      <main className="mx-auto w-full max-w-6xl px-6 py-16">
+      <main className="mx-auto w-full max-w-[1440px] px-6 py-16">
         <h1 className="text-xl font-semibold">This profile could not load</h1>
         <p className="mt-2 text-sm text-muted-foreground">{failure}</p>
       </main>
@@ -71,7 +73,7 @@ export default async function ProfilePage({ params }: PageProps<"/profile/[usern
   const initial = profile.username.charAt(0).toUpperCase();
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-6 py-10">
+    <main className="mx-auto w-full max-w-[1440px] px-6 py-10">
       <Link
         href="/"
         className="text-[12.5px] text-muted-foreground transition-colors hover:text-foreground"
