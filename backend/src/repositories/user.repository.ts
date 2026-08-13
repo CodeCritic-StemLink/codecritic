@@ -9,6 +9,28 @@ import type { Prisma, User } from "../generated/prisma/client";
 // Keeping every query in one file means that when a query is wrong, there is exactly
 // one place to look.
 
+/** What the profile insights need from each review this person wrote. */
+const reviewGivenSelect = {
+  createdAt: true,
+  submission: { select: { tags: true } },
+  ratings: { select: { score: true } },
+} satisfies Prisma.ReviewSelect;
+
+export type ReviewGivenForInsights = Prisma.ReviewGetPayload<{ select: typeof reviewGivenSelect }>;
+
+/** What the profile's submission list needs, one row per submission this person posted. */
+const authoredSubmissionSelect = {
+  id: true,
+  title: true,
+  tags: true,
+  createdAt: true,
+  _count: { select: { reviews: true } },
+} satisfies Prisma.SubmissionSelect;
+
+export type AuthoredSubmission = Prisma.SubmissionGetPayload<{
+  select: typeof authoredSubmissionSelect;
+}>;
+
 export const userRepository = {
   findByClerkId(clerkId: string): Promise<User | null> {
     return prisma.user.findUnique({ where: { clerkId } });
@@ -20,6 +42,31 @@ export const userRepository = {
 
   findById(id: string): Promise<User | null> {
     return prisma.user.findUnique({ where: { id } });
+  },
+
+  /** How many reviews were written on submissions this person authored. Feature 02. */
+  countReviewsReceived(userId: string): Promise<number> {
+    return prisma.review.count({ where: { submission: { authorId: userId } } });
+  },
+
+  /**
+   * Every review this person wrote, with just enough about the submission and the
+   * ratings to build the profile insights. Feature 02.
+   */
+  findReviewsGivenForInsights(userId: string): Promise<ReviewGivenForInsights[]> {
+    return prisma.review.findMany({
+      where: { reviewerId: userId },
+      select: reviewGivenSelect,
+    });
+  },
+
+  /** Every submission this person posted, newest first. Feature 02. */
+  findSubmissionsByAuthor(userId: string): Promise<AuthoredSubmission[]> {
+    return prisma.submission.findMany({
+      where: { authorId: userId },
+      orderBy: { createdAt: "desc" },
+      select: authoredSubmissionSelect,
+    });
   },
 
   /** Creates the row the first time we see a Clerk identity, updates it after that. */

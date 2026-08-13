@@ -39,6 +39,13 @@ export const userController = {
     res.json({ user });
   },
 
+  /** GET /api/users/me. Your own row, for the navbar's karma chip and avatar. */
+  async getMe(req: Request, res: Response) {
+    const me = await requireUser(req);
+
+    res.json({ user: me });
+  },
+
   /** PATCH /api/users/me */
   async updateMe(req: Request, res: Response) {
     const me = await requireUser(req);
@@ -52,5 +59,12 @@ export const userController = {
     const user = await userService.updateProfile(me, parsed.data);
 
     res.json({ user });
+  },
+
+  /** GET /api/users/:username. Public profile with insights. Feature 02. */
+  async getByUsername(req: Request, res: Response) {
+    const profile = await userService.getProfile(req.params.username);
+
+    res.json(profile);
   },
 };

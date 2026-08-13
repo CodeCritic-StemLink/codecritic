@@ -128,9 +128,10 @@ reviews rather than typed in.
 | Endpoint | State |
 | --- | --- |
 | `GET /api/health` | Done |
-| `GET /api/submissions` | Works, but plain. Newest first, no ranking, no filters yet. |
+| `GET /api/submissions` | Done. Ranked for signed in users, newest first for visitors. |
 | `POST /api/users/sync` | Done. Creates or updates our User row from the Clerk identity. |
 | `PATCH /api/users/me` | Done. Edits your own profile only. |
+| `GET /api/users/:username` | Done. Public profile with insights. Feature 02. |
 
 **Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
 is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
@@ -142,10 +143,10 @@ up and account menu.
 
 | Missing | Owner |
 | --- | --- |
-| `GET /submissions/:id`, `POST /submissions`, `POST /submissions/:id/reviews` | Andrew |
-| `GET /users/:username` and its insights | Aqeel |
-| The ranking engine and the ranked feed | Osini |
-| Every page: feed, detail, post form, review form, profile | Aaysha |
+| `POST /submissions`, with its validation rules, and the `/submissions/new` post form | Aaysha |
+| `GET /submissions/:id`, `POST /submissions/:id/reviews` with the Karma transaction, the detail page and the review form | Andrew |
+| The ranking engine and the ranked feed | Osini, done |
+| `GET /users/:username`, its insights, and the `/profile/[username]` page | Aqeel, done |
 | Styled sign in and sign up pages on our own routes | Aaysha |
 | Deployment to Render and Vercel | Osini |
 | A SQL dump committed for long term revival | Osini |
@@ -741,7 +742,7 @@ on its own small pull request, and then nobody touches it again.
 
 | File | Rule |
 | --- | --- |
-| `backend/src/routes/users.ts` | Osini owns sync and me. Aqeel adds the profile route below the marked comment. |
+| `backend/src/routes/user.routes.ts` | Osini owns sync and me. Aqeel's `GET /:username` is added, Feature 02, done. |
 | `frontend/src/lib/api/` | One file per resource. Never put two people's calls in one file. |
 | `frontend/src/app/globals.css` | Theme changes only, and say so in the chat first. Everyone renders through it. |
 | `backend/prisma/schema.prisma` | Schema changes go through the group. A migration nobody expected breaks three machines. |
