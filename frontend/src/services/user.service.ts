@@ -66,6 +66,25 @@ export type ProfileSubmission = {
   status: "pending" | "reviewed";
 };
 
+/** One score, with the criterion it was scored against, inside a review list item. */
+export type RatingItem = { criterionId: string; label: string; score: number };
+
+/** One review this person wrote, in the "reviews I have written" list. */
+export type ReviewGivenItem = {
+  id: string;
+  strengths: string;
+  improvements: string;
+  resources: string[];
+  createdAt: string;
+  submission: { id: string; title: string };
+  ratings: RatingItem[];
+};
+
+/** One review written on this person's own work, in the "reviews I have received" list. */
+export type ReviewReceivedItem = ReviewGivenItem & {
+  reviewer: { username: string };
+};
+
 export type PublicProfile = {
   username: string;
   bio: string | null;
@@ -76,6 +95,8 @@ export type PublicProfile = {
   reviewsReceived: number;
   insights: ProfileInsights;
   submissions: ProfileSubmission[];
+  reviewsGivenList: ReviewGivenItem[];
+  reviewsReceivedList: ReviewReceivedItem[];
 };
 
 /**

@@ -5,9 +5,6 @@
 // This file needs no database and no server, because ranking.ts is pure maths. That is
 // the whole reason the scoring lives in its own file.
 
-import { test } from "node:test";
-import assert from "node:assert/strict";
-
 import {
   matchingTags,
   recencyPoints,
@@ -32,19 +29,19 @@ function hoursBefore(hours: number): Date {
 test("matches the tags the viewer works with, and ignores the rest", () => {
   const matches = matchingTags(["React", "Next.js", "Rust"], ["React", "Next.js", "Tailwind"]);
 
-  assert.deepEqual(matches, ["React", "Next.js"]);
+  expect(matches).toEqual(["React", "Next.js"]);
 });
 
 test("matching ignores case, so a react tag still matches a React stack", () => {
-  assert.deepEqual(matchingTags(["react"], ["React"]), ["react"]);
+  expect(matchingTags(["react"], ["React"])).toEqual(["react"]);
 });
 
 test("a repeated tag is only counted once", () => {
-  assert.deepEqual(matchingTags(["React", "React"], ["React"]), ["React"]);
+  expect(matchingTags(["React", "React"], ["React"])).toEqual(["React"]);
 });
 
 test("nothing matches for a viewer with an empty stack", () => {
-  assert.deepEqual(matchingTags(["React", "Node"], []), []);
+  expect(matchingTags(["React", "Node"], [])).toEqual([]);
 });
 
 // --------------------------------------------------------------------------
@@ -52,28 +49,28 @@ test("nothing matches for a viewer with an empty stack", () => {
 // --------------------------------------------------------------------------
 
 test("a brand new submission gets the full recency score", () => {
-  assert.equal(recencyPoints(NOW, NOW), MAX_RECENCY_POINTS);
+  expect(recencyPoints(NOW, NOW)).toBe(MAX_RECENCY_POINTS);
 });
 
 test("recency halves after 48 hours", () => {
-  assert.equal(recencyPoints(hoursBefore(48), NOW), 5);
+  expect(recencyPoints(hoursBefore(48), NOW)).toBe(5);
 });
 
 test("recency halves again after another 48 hours", () => {
-  assert.equal(recencyPoints(hoursBefore(96), NOW), 3);
+  expect(recencyPoints(hoursBefore(96), NOW)).toBe(3);
 });
 
 test("a very old submission decays towards zero but never goes negative", () => {
   const points = recencyPoints(hoursBefore(24 * 365), NOW);
 
-  assert.equal(points, 0);
-  assert.ok(points >= 0);
+  expect(points).toBe(0);
+  expect(points >= 0).toBe(true);
 });
 
 test("a future date is treated as brand new, not scored above the maximum", () => {
   const future = new Date(NOW.getTime() + 60 * 60 * 1000);
 
-  assert.equal(recencyPoints(future, NOW), MAX_RECENCY_POINTS);
+  expect(recencyPoints(future, NOW)).toBe(MAX_RECENCY_POINTS);
 });
 
 // --------------------------------------------------------------------------
@@ -87,9 +84,9 @@ test("the three parts add up to the total", () => {
     NOW
   );
 
-  assert.equal(score.tagPoints, 2 * POINTS_PER_MATCHING_TAG);
-  assert.equal(score.needsHelpPoints, NEEDS_HELP_POINTS);
-  assert.equal(score.total, score.tagPoints + score.recencyPoints + score.needsHelpPoints);
+  expect(score.tagPoints).toBe(2 * POINTS_PER_MATCHING_TAG);
+  expect(score.needsHelpPoints).toBe(NEEDS_HELP_POINTS);
+  expect(score.total).toBe(score.tagPoints + score.recencyPoints + score.needsHelpPoints);
 });
 
 test("a reviewed submission gets no needs-help bonus", () => {
@@ -99,7 +96,7 @@ test("a reviewed submission gets no needs-help bonus", () => {
     NOW
   );
 
-  assert.equal(score.needsHelpPoints, 0);
+  expect(score.needsHelpPoints).toBe(0);
 });
 
 test("one matching tag beats the entire recency range, so relevance beats freshness", () => {
@@ -115,7 +112,7 @@ test("one matching tag beats the entire recency range, so relevance beats freshn
     NOW
   );
 
-  assert.ok(relevantButOld.total > freshButIrrelevant.total);
+  expect(relevantButOld.total > freshButIrrelevant.total).toBe(true);
 });
 
 test("between two equally relevant submissions, the unreviewed one wins", () => {
@@ -131,7 +128,7 @@ test("between two equally relevant submissions, the unreviewed one wins", () => 
     NOW
   );
 
-  assert.ok(ignored.total > alreadyAnswered.total);
+  expect(ignored.total > alreadyAnswered.total).toBe(true);
 });
 
 test("the needs-help bonus never outranks a genuine extra tag match", () => {
@@ -147,7 +144,7 @@ test("the needs-help bonus never outranks a genuine extra tag match", () => {
     NOW
   );
 
-  assert.ok(twoTagsReviewed.total > oneTagNoReviews.total);
+  expect(twoTagsReviewed.total > oneTagNoReviews.total).toBe(true);
 });
 
 // --------------------------------------------------------------------------
@@ -166,30 +163,30 @@ const FEED = [
 test("a front end developer sees their own technologies first", () => {
   const order = rankSubmissions(FEED, ["React", "Next.js", "Tailwind"], NOW).map((s) => s.id);
 
-  assert.equal(order[0], "react-dashboard");
-  assert.equal(order[1], "tailwind-components");
+  expect(order[0]).toBe("react-dashboard");
+  expect(order[1]).toBe("tailwind-components");
 });
 
 test("a back end developer sees a completely different order from the same submissions", () => {
   const frontEnd = rankSubmissions(FEED, ["React", "Next.js", "Tailwind"], NOW).map((s) => s.id);
   const backEnd = rankSubmissions(FEED, ["Node", "Express", "Prisma"], NOW).map((s) => s.id);
 
-  assert.equal(backEnd[0], "bookstore-api");
-  assert.equal(backEnd[1], "booking-schema");
-  assert.notDeepEqual(frontEnd, backEnd);
+  expect(backEnd[0]).toBe("bookstore-api");
+  expect(backEnd[1]).toBe("booking-schema");
+  expect(frontEnd).not.toEqual(backEnd);
 });
 
 test("the same submissions come back, only reordered, nothing dropped or added", () => {
   const ranked = rankSubmissions(FEED, ["React"], NOW);
 
-  assert.equal(ranked.length, FEED.length);
-  assert.deepEqual([...ranked.map((s) => s.id)].sort(), [...FEED.map((s) => s.id)].sort());
+  expect(ranked.length).toBe(FEED.length);
+  expect([...ranked.map((s) => s.id)].sort()).toEqual([...FEED.map((s) => s.id)].sort());
 });
 
 test("a viewer with no tech stack still gets a sensible order, newest and unreviewed first", () => {
   const order = rankSubmissions(FEED, [], NOW).map((s) => s.id);
 
-  assert.equal(order[0], "react-dashboard");
+  expect(order[0]).toBe("react-dashboard");
 });
 
 test("equal scores break the tie on newest first, so the order is never random", () => {
@@ -200,5 +197,5 @@ test("equal scores break the tie on newest first, so the order is never random",
 
   const order = rankSubmissions(twins, ["React"], NOW).map((s) => s.id);
 
-  assert.deepEqual(order, ["newer", "older"]);
+  expect(order).toEqual(["newer", "older"]);
 });
