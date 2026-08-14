@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { CircleCheck, CircleDashed, Clock, MessageSquare } from "lucide-react";
+import { CircleCheck, CircleDashed, Clock, MessageSquare, PenLine } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { ScoreExplainer } from "@/components/ScoreExplainer";
+import { UserLink } from "@/components/UserLink";
+import { normaliseTag } from "@/lib/tags";
 import { timeAgo } from "@/lib/utils";
 import type { FeedItem } from "@/services/submission.service";
 
@@ -29,7 +32,11 @@ type Props = {
 
 export function SubmissionCard({ submission, showScore = false }: Props) {
   const { score } = submission;
-  const matched = new Set(score?.matchedTags ?? []);
+
+  // Normalised, so a tag the API matched as "node" still lights up a chip reading
+  // "Node". The two spellings are the same technology everywhere else, and a chip that
+  // failed to highlight would look like the matching was broken.
+  const matched = new Set((score?.matchedTags ?? []).map(normaliseTag));
   const isMatch = matched.size > 0;
 
   return (
@@ -84,7 +91,7 @@ export function SubmissionCard({ submission, showScore = false }: Props) {
             key={tag}
             variant="secondary"
             className={
-              matched.has(tag)
+              matched.has(normaliseTag(tag))
                 ? "border border-primary bg-accent font-mono text-[11px] font-normal text-primary"
                 : "font-mono text-[11px] font-normal text-muted-foreground"
             }
@@ -95,16 +102,9 @@ export function SubmissionCard({ submission, showScore = false }: Props) {
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11.5px] text-muted-foreground">
-        {/*
-          relative + z-10 lifts this above the title's stretched overlay, so clicking
-          the name goes to the profile rather than to the submission.
-        */}
-        <Link
-          href={`/profile/${submission.author.username}`}
-          className="relative z-10 text-foreground hover:text-primary hover:underline"
-        >
-          @{submission.author.username}
-        </Link>
+        {/* overlay lifts it above the title's stretched click area, so clicking the
+            name goes to the profile rather than to the submission. */}
+        <UserLink username={submission.author.username} overlay className="text-foreground" />
 
         <span className="flex items-center gap-1">
           <Clock className="size-3" aria-hidden />
@@ -115,16 +115,20 @@ export function SubmissionCard({ submission, showScore = false }: Props) {
           <MessageSquare className="size-3" aria-hidden />
           {reviewLabel(submission.reviewCount)}
         </span>
+
+        {/*
+          Shown because you cannot review the same request twice. Without it, a card
+          that has quietly dropped down the feed looks like it moved for no reason.
+        */}
+        {submission.reviewedByViewer ? (
+          <span className="flex items-center gap-1 text-primary">
+            <PenLine className="size-3" aria-hidden />
+            you reviewed this
+          </span>
+        ) : null}
       </div>
 
-      {showScore && score ? (
-        <p className="mt-3 rounded-md bg-muted px-2.5 py-2 font-mono text-[11.5px] leading-relaxed text-muted-foreground">
-          score <span className="font-semibold text-primary">{score.total}</span> = tags{" "}
-          {score.tagPoints}
-          {score.matchedTags.length > 0 ? ` (${score.matchedTags.join(", ")})` : " (no match)"} +
-          fresh {score.recencyPoints} + needs help {score.needsHelpPoints}
-        </p>
-      ) : null}
+      {showScore && score ? <ScoreExplainer score={score} /> : null}
     </article>
   );
 }
