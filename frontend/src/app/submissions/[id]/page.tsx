@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 
 import { getSubmission } from "@/services/submission.service";
-import type { ReviewRating } from "@/services/submission.service";
+import { SubmissionReviewCard } from "@/components/SubmissionReviewCard";
 import { Badge } from "@/components/ui/badge";
-import { ReviewCard } from "@/components/ReviewCard";
 import { ReviewForm } from "@/components/ReviewForm";
 import { ApiError } from "@/api/api";
 
@@ -132,7 +131,7 @@ export default async function SubmissionDetailPage({ params }: PageProps<"/submi
 
         <div className="mt-4 flex flex-col gap-3">
           {submission.reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+            <SubmissionReviewCard key={review.id} review={review} />
           ))}
         </div>
       </div>
