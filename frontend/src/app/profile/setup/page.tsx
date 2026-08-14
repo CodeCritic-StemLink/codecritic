@@ -66,6 +66,31 @@ const SUGGESTIONS = [
 /** The same ceiling the API enforces in models/user.schema.ts. */
 const MAX_TECH = 20;
 
+/**
+ * The title above one section of the form.
+ *
+ * Above the card, not inside it. These were <legend> elements, which sit in the
+ * fieldset's own border and cut a notch out of it: at a glance that reads as a gap in
+ * the box rather than as a heading for it.
+ *
+ * Matching the section titles on the profile page, so a person moving between the two
+ * sees the same kind of heading in the same place both times.
+ */
+function SectionHeading({ children, hint }: { children: string; hint?: string }) {
+  return (
+    <div className="mb-2.5">
+      <h2 className="font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {children}
+      </h2>
+      {hint ? (
+        <p className="mt-1 max-w-[80ch] text-[12.5px] leading-relaxed text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /*
  * What we know about the profile this person already has.
  *
@@ -155,11 +180,33 @@ export default function ProfileSetupPage() {
     };
   }, [authLoaded, getToken, reloadKey]);
 
-  /** Ask again, for the retry button on the "could not load" banner. */
+  /** Ask again, for the retry button and for the back button. */
   const retryLoad = useCallback(() => {
     setLoadState("loading");
     setReloadKey((key) => key + 1);
   }, []);
+
+  /*
+   * Load again when the browser restores this page from its back/forward cache.
+   *
+   * Navigating inside the site re-runs the effect above, because the component is
+   * mounted again, so the ordinary back button is already covered. What is not is the
+   * browser freezing the whole page, including this component's state, and thawing it
+   * later: leave the site, come back, and you are looking at a form filled in from
+   * whenever you left rather than from the database.
+   *
+   * `persisted` is true only for that restore, so this costs nothing on a normal load.
+   * The same listener covers a tab that has been asleep for a long time.
+   */
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) retryLoad();
+    }
+
+    window.addEventListener("pageshow", onPageShow);
+
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [retryLoad]);
 
   /** Already on the list? Compared without case, so "node" cannot be added twice. */
   function alreadyPicked(tech: string): boolean {
@@ -345,20 +392,30 @@ export default function ProfileSetupPage() {
         </div>
       ) : null}
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <fieldset
-            disabled={locked}
-            className="rounded-[var(--radius)] border bg-card p-5 sm:p-6 disabled:opacity-60"
-          >
-            <legend className="px-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              About you
-            </legend>
+      {/*
+        The form takes the whole width. There was a panel beside it explaining what the
+        technologies are for, which pushed the fields into two thirds of the page for
+        the sake of something you read once. The explaining now happens where the
+        decision is made, as one line under the heading it belongs to.
+      */}
+      <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-5">
+        <fieldset disabled={locked} className="min-w-0 disabled:opacity-60">
+          {/*
+            A plain heading above the card, not a <legend> inside it.
 
+            A legend sits in the border and cuts a notch out of it, which reads as a
+            gap in the box rather than as a title. The fieldset is kept, without a
+            border of its own, purely for `disabled`: one attribute turns off every
+            control inside it, which is what locks the form while we do not know what
+            is already stored.
+          */}
+          <SectionHeading>About you</SectionHeading>
+
+          <div className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
             {/* Three across on a wide screen, two on a tablet, one on a phone. These are
                 all short answers, and one per row made the form far taller than the
                 amount of typing in it. */}
-            <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <div>
                 <label htmlFor="username" className="mb-1.5 block text-[12.5px] font-semibold">
                   Username
@@ -409,17 +466,21 @@ export default function ProfileSetupPage() {
                 </p>
               </div>
             </div>
-          </fieldset>
+          </div>
+        </fieldset>
 
-          <fieldset
-            disabled={locked}
-            className="rounded-[var(--radius)] border bg-card p-5 sm:p-6 disabled:opacity-60"
-          >
-            <legend className="px-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              What you work with
-            </legend>
+        <fieldset disabled={locked} className="min-w-0 disabled:opacity-60">
+          {/*
+            The explanation that used to be a panel beside the form. It belongs here,
+            beside the decision it is about, rather than in a box you read once and then
+            look past for the rest of the page.
+          */}
+          <SectionHeading hint="The feed shows everybody the same requests, but puts the ones you can help with first. It works that out by comparing these against the tags on each request.">
+            What you work with
+          </SectionHeading>
 
-            <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+          <div className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
               <label htmlFor="tech-draft" className="text-[12.5px] font-semibold">
                 Add a technology
               </label>
@@ -523,57 +584,44 @@ export default function ProfileSetupPage() {
                 </p>
               ) : null}
             </div>
-          </fieldset>
 
-          {error ? (
-            <p className="rounded-md border border-destructive px-3 py-2 text-[13px] text-destructive">
-              {error}
+            <p className="mt-4 flex items-start gap-1.5 border-t pt-3 text-[11.5px] leading-relaxed text-muted-foreground">
+              <Sparkles className="mt-0.5 size-3 shrink-0" aria-hidden />
+              Pick nothing and the feed still works, it just falls back to newest first.
+              Turn on <span className="font-semibold">Why this order?</span> on the feed to
+              see the points for yourself.
             </p>
-          ) : null}
-
-          <div className="flex items-center gap-3">
-            <Button
-              type="submit"
-              disabled={locked || saving || username.trim().length < 3}
-              className="w-full sm:w-auto"
-            >
-              {saving ? "Saving" : editing ? "Save changes" : "Save and see my profile"}
-            </Button>
-
-            {locked ? (
-              <span className="text-[12px] text-muted-foreground">
-                {loadState === "loading"
-                  ? "Waiting for your existing profile."
-                  : "Saving is off until your profile loads."}
-              </span>
-            ) : username.trim().length < 3 ? (
-              <span className="text-[12px] text-muted-foreground">
-                A username of at least 3 characters is needed.
-              </span>
-            ) : null}
           </div>
-        </form>
+        </fieldset>
 
-        <aside className="rounded-[var(--radius)] border border-primary bg-accent p-4 lg:sticky lg:top-6">
-          <p className="flex items-center gap-1.5 text-[13px] font-semibold text-accent-foreground">
-            <Sparkles className="size-3.5" aria-hidden />
-            Why we ask
+        {error ? (
+          <p className="mx-auto max-w-lg rounded-md border border-destructive px-3 py-2 text-center text-[13px] text-destructive">
+            {error}
           </p>
-          <p className="mt-1.5 text-[12.5px] leading-relaxed text-accent-foreground/80">
-            The feed shows everybody the same requests, but it puts the ones you can
-            actually help with first. It works that out by comparing the technologies here
-            against the tags on each request.
-          </p>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-accent-foreground/80">
-            Pick nothing and the feed still works, it just falls back to newest first.
-            Turn on <span className="font-semibold">Why this order?</span> on the feed to
-            see the points for yourself.
-          </p>
-          <p className="mt-2 border-t border-primary/30 pt-2 text-[12.5px] leading-relaxed text-accent-foreground/80">
-            Saving again never touches your Karma, your requests or your reviews.
-          </p>
-        </aside>
-      </div>
+        ) : null}
+
+        {/* Centred, because the form is now the full width of the page and a button
+            hanging off the left edge of it reads as unfinished. */}
+        <div className="flex flex-col items-center gap-2 pb-2">
+          <Button
+            type="submit"
+            disabled={locked || saving || username.trim().length < 3}
+            className="w-full sm:w-auto sm:min-w-[220px]"
+          >
+            {saving ? "Saving" : editing ? "Save changes" : "Save and see my profile"}
+          </Button>
+
+          <span className="text-center text-[12px] text-muted-foreground">
+            {locked
+              ? loadState === "loading"
+                ? "Waiting for your existing profile."
+                : "Saving is off until your profile loads."
+              : username.trim().length < 3
+                ? "A username of at least 3 characters is needed."
+                : "Your Karma, your requests and your reviews are never touched by saving."}
+          </span>
+        </div>
+      </form>
     </PageShell>
   );
 }
