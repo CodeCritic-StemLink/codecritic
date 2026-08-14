@@ -172,7 +172,6 @@ export const submissionService = {
   },
 
   /**
-/**
    * One submission in full: criteria, every review, every rating, and two flags
    * telling the UI whether this viewer may see a review button. Optional auth, same
    * reasoning as the feed — a visitor can read a request without an account.

@@ -108,7 +108,7 @@ export const submissionRepository = {
     });
   },
 
-/** One submission in full, for the detail page: every review, every rating. */
+  /** One submission in full, for the detail page: every review, every rating. */
   findByIdWithReviews(id: string): Promise<SubmissionWithReviews | null> {
     return prisma.submission.findUnique({
       where: { id },

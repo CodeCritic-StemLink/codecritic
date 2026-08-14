@@ -24,8 +24,3 @@ submissionRoutes.post(
 
 /** Post a review request. All five validation rules live in the schema, not here. */
 submissionRoutes.post("/", writeLimiter, catchAsync(submissionController.create));
-
-// ---------------------------------------------------------------------------
-// Aaysha owns the rest of this file:
-//
-

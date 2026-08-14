@@ -51,7 +51,7 @@ export const submissionController = {
   },
 
   /**
-* GET /api/submissions/:id
+   * GET /api/submissions/:id
    *
    * One request in full, with criteria, reviews and ratings. Optional auth: signed in
    * users get the two viewer flags the review form uses to decide whether to show

@@ -1,25 +1,30 @@
 // Tests for the review validation rules. This is the endpoint that awards Karma, so
 // it is the one most worth attacking — see docs/test-plan.md, Andrew's section.
 //
+// Run with:  npm test    (from backend)
+//
 // This file needs no database and no server, because validateReviewFields is pure.
 // See the comment at the top of models/review.schema.ts for why.
-
-import { test } from "node:test";
-import assert from "node:assert/strict";
 
 import { validateReviewFields } from "../../src/models/review.schema";
 import { BadRequestError } from "../../src/errors/appError";
 
 const CRITERIA = [{ id: "c1" }, { id: "c2" }];
 
-/** Runs fn, asserts it threw a BadRequestError, and asserts it carries this code. */
+/**
+ * Runs fn, and asserts it threw a BadRequestError carrying this exact code.
+ *
+ * The code matters more than the message: the front end shows the message but branches
+ * on the code, so a rule failing with the wrong code is a bug even when the wording
+ * happens to read correctly.
+ */
 function assertRejects(fn: () => unknown, code: string) {
+  expect(fn).toThrow(BadRequestError);
+
   try {
     fn();
-    assert.fail(`expected validation to throw ${code}, but it did not throw`);
   } catch (error) {
-    assert.ok(error instanceof BadRequestError, "expected a BadRequestError");
-    assert.equal((error as BadRequestError).code, code);
+    expect((error as BadRequestError).code).toBe(code);
   }
 }
 
@@ -37,12 +42,9 @@ test("accepts a fully valid review", () => {
     CRITERIA
   );
 
-  assert.equal(result.strengths, "Clear structure, easy to follow.");
-  assert.equal(result.resources.length, 1);
-  assert.deepEqual(
-    result.ratings.map((r) => r.criterionId).sort(),
-    ["c1", "c2"]
-  );
+  expect(result.strengths).toBe("Clear structure, easy to follow.");
+  expect(result.resources).toHaveLength(1);
+  expect(result.ratings.map((r) => r.criterionId).sort()).toEqual(["c1", "c2"]);
 });
 
 test("accepts a review with no resources at all", () => {
@@ -58,7 +60,7 @@ test("accepts a review with no resources at all", () => {
     CRITERIA
   );
 
-  assert.deepEqual(result.resources, []);
+  expect(result.resources).toEqual([]);
 });
 
 test("rejects empty strengths", () => {
