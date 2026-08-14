@@ -8,13 +8,16 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
 import { getMe } from "@/services/user.service";
 
-// The navbar. Matches the agreed design preview: brand mark, Browse (always), My
-// requests / My reviews once we know who somebody is, a karma chip, a Post a request
-// button, and the account menu.
+// The navbar: brand mark, the navigation links, a karma chip, a Post a request button,
+// and the account menu.
 //
 // A server component, async, so the karma chip is correct on first paint rather than
 // flashing in after a client fetch. `auth()` gives us the Clerk identity; our own
 // karma and username still have to come from our database, through GET /users/me.
+//
+// The layout is one row from sm up and two rows on a phone, done with flex-wrap and
+// `order` rather than by rendering the links twice or hiding them. See the comment on
+// the container below, and NavLinks.tsx for why they moved out of the centre.
 
 export async function Nav() {
   const { userId, getToken } = await auth();
@@ -51,10 +54,23 @@ export async function Nav() {
         edge: the karma chip and "Post a request" are both whitespace-nowrap, so
         instead of wrapping they simply overflowed the header.
       */}
-      <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8 2xl:px-12">
+      {/*
+        flex-wrap plus `order`, so one set of links can sit in two different places
+        without being rendered twice.
+
+        On a phone the brand and the actions share the first line and the links wrap
+        onto a second row of their own, because everything does not fit on one line at
+        375px and hiding half the navigation was the wrong way to solve that.
+
+        From sm up the order changes and all three sit on one line: brand, links, then
+        actions pushed right by ml-auto. The bar used justify-between on three children,
+        which is what stranded the links in the dead centre of a wide screen with a gulf
+        on either side.
+      */}
+      <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:flex-nowrap sm:gap-x-4 sm:px-6 sm:py-3 lg:px-8 2xl:px-12">
         <Link
           href="/"
-          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
+          className="order-1 flex shrink-0 items-center gap-2 font-semibold tracking-tight"
         >
           {/* The same mark as the browser tab icon, so the two agree. */}
           <BrandMark />
@@ -63,9 +79,12 @@ export async function Nav() {
           <span className="hidden sm:inline">CodeCritic</span>
         </Link>
 
-        <NavLinks username={me?.username} />
+        <NavLinks
+          username={me?.username}
+          className="order-3 -mx-1 w-full overflow-x-auto border-t pt-1.5 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:border-t-0 sm:pt-0"
+        />
 
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="order-2 ml-auto flex min-w-0 items-center gap-2 sm:order-3 sm:gap-3">
           <ThemeToggle />
 
           {!userId ? (
