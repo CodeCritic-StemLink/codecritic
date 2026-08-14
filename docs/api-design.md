@@ -65,10 +65,10 @@ Success returns the resource directly. Errors always look like this:
 | Method | Path | Auth | Purpose | State | Owner |
 | --- | --- | --- | --- | --- | --- |
 | GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. | Plain version works, ranking to come | Osini |
-| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | Not built | Andrew |
-| POST | `/submissions` | Required | Post a new review request. | Not built | Andrew |
-| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | Not built | Andrew |
-| GET | `/users/:username` | Optional | Public profile with insights. | Not built | Aqeel |
+| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | In review, PR #4 | Andrew |
+| POST | `/submissions` | Required | Post a new review request. | **Not started** | Aaysha, see `aaysha-submission-feature.md` |
+| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | In review, PR #4 | Andrew |
+| GET | `/users/:username` | Optional | Public profile with insights. | **Built** | Aqeel |
 | POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. | **Built** | Osini |
 | PATCH | `/users/me` | Required | Edit your own profile only. | **Built** | Osini |
 

@@ -12,6 +12,9 @@ refined as you build", and they are submitted alongside the repository link.
 | `api-design.md` | Every endpoint the front end can call, what it expects, what it returns, and which server side validation rules apply to each one. Includes the Feature 01 ranking formula and the plan for proving validation works. | Version 1, 2026-08-11 |
 | `team-guide.md` | **Start here.** The A to Z guide for the whole team: what we are building, how we meet the SRS, how to get set up from nothing, how we use branches and pull requests, who owns what, the plan to the deadline, how deployment works, and what every member must be able to explain. | 2026-08-12 |
 | `architecture.md` | **Read before writing any file.** The folder structure for both halves, what each layer may import, how one request travels through them, the error hierarchy, and the decisions we locked where the SRS and the class notes disagreed. | 2026-08-12 |
+| `deployment.md` | Where everything runs, why we chose Neon, Render and Vercel, the exact settings for each, the environment variables, how CORS works, the keepalive robot, and what to do when a deploy breaks. | 2026-08-13 |
+| `authentication.md` | How signing up, signing in and signing out work: what Clerk owns, what we built, the two records and the `clerkId` joining them, every situation we could think of, and the questions each of us must be able to answer. | 2026-08-14 |
+| `aaysha-submission-feature.md` | The full specification for posting a review request, split into back end, unit tests and form. Written because `POST /submissions` is the last unstarted piece and the whole product depends on it. | 2026-08-13 |
 | `test-plan.md` | One section per person. The exact command, the expected result and the real result for every rule on their own feature. This is the evidence we show at assessment. | Started 2026-08-12 |
 
 ## Why these come before the code

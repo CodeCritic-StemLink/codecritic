@@ -33,3 +33,78 @@ export function syncProfile(input: ProfileInput, token: string): Promise<{ user:
     body: input,
   });
 }
+
+/**
+ * Your own row. Used by the navbar for the karma chip and the "who am I" links.
+ *
+ * Throws `USER_NOT_FOUND` when signed in to Clerk but `POST /users/sync` has never
+ * run, which callers should treat as "not finished setting up" rather than an error.
+ */
+export function getMe(token: string): Promise<{ user: User }> {
+  return apiFetch<{ user: User }>("/users/me", { token });
+}
+
+/** One technology and how many reviews this person has written on submissions tagged with it. */
+export type TagCount = { tag: string; count: number };
+
+/** One calendar month, "2026-08", and how many reviews this person wrote in it. */
+export type MonthCount = { month: string; count: number };
+
+export type ProfileInsights = {
+  reviewsByTag: TagCount[];
+  reviewsByMonth: MonthCount[];
+  /** Null when this person has never rated anything, not a misleading 0. */
+  averageScoreGiven: number | null;
+};
+
+export type ProfileSubmission = {
+  id: string;
+  title: string;
+  tags: string[];
+  createdAt: string;
+  reviewCount: number;
+  status: "pending" | "reviewed";
+};
+
+/** One score, with the criterion it was scored against, inside a review list item. */
+export type RatingItem = { criterionId: string; label: string; score: number };
+
+/** One review this person wrote, in the "reviews I have written" list. */
+export type ReviewGivenItem = {
+  id: string;
+  strengths: string;
+  improvements: string;
+  resources: string[];
+  createdAt: string;
+  submission: { id: string; title: string };
+  ratings: RatingItem[];
+};
+
+/** One review written on this person's own work, in the "reviews I have received" list. */
+export type ReviewReceivedItem = ReviewGivenItem & {
+  reviewer: { username: string };
+};
+
+export type PublicProfile = {
+  username: string;
+  bio: string | null;
+  techStack: string[];
+  githubUrl: string | null;
+  karma: number;
+  reviewsGiven: number;
+  reviewsReceived: number;
+  insights: ProfileInsights;
+  submissions: ProfileSubmission[];
+  reviewsGivenList: ReviewGivenItem[];
+  reviewsReceivedList: ReviewReceivedItem[];
+};
+
+/**
+ * A public profile. Feature 02.
+ *
+ * Works logged out: the SRS requires that anyone can view anyone's profile without an
+ * account, so this never sends a token.
+ */
+export function getProfile(username: string): Promise<PublicProfile> {
+  return apiFetch<PublicProfile>(`/users/${encodeURIComponent(username)}`);
+}

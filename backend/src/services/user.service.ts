@@ -1,12 +1,54 @@
 import { userRepository } from "../repositories/user.repository";
-import { ConflictError } from "../errors/appError";
+import { ConflictError, NotFoundError } from "../errors/appError";
 import type { ProfileInput, UpdateProfileInput } from "../models/user.schema";
 import type { User } from "../generated/prisma/client";
+import { buildInsights } from "./insights.service";
+import type { ProfileInsights } from "./insights.service";
+import { toReviewGivenItem, toReviewReceivedItem } from "./reviewList.service";
+import type { ReviewGivenItem, ReviewReceivedItem } from "./reviewList.service";
 
 // The rules about users. No req, no res, no prisma.
 //
 // This file can be called from a controller, from a script, or from a test, because it
 // takes plain values and gives plain values back.
+//
+// The insight counting lives in insights.service.ts and the review list mapping in
+// reviewList.service.ts, kept separate because both are pure, with no Prisma import,
+// so they can be tested with no database.
+
+export type ProfileSubmission = {
+  id: string;
+  title: string;
+  tags: string[];
+  createdAt: Date;
+  reviewCount: number;
+  status: "pending" | "reviewed";
+};
+
+/**
+ * The public profile. Feature 02.
+ *
+ * Deliberately excludes id and clerkId: nothing here identifies the row internally,
+ * only what a visitor is allowed to see about the person.
+ */
+export type PublicProfile = {
+  username: string;
+  bio: string | null;
+  techStack: string[];
+  githubUrl: string | null;
+  karma: number;
+  reviewsGiven: number;
+  reviewsReceived: number;
+  insights: ProfileInsights;
+  submissions: ProfileSubmission[];
+  /**
+   * The SRS asks that a user can "manage their own activity: requests they have
+   * posted, reviews they have given, and reviews they have received." The counts
+   * alone do not satisfy that, hence these two full lists alongside them.
+   */
+  reviewsGivenList: ReviewGivenItem[];
+  reviewsReceivedList: ReviewReceivedItem[];
+};
 
 export const userService = {
   /**
@@ -58,5 +100,48 @@ export const userService = {
     if (existing && existing.clerkId !== forClerkId) {
       throw new ConflictError("Somebody already has that username.", "USERNAME_TAKEN");
     }
+  },
+
+  /**
+   * The public profile. Feature 02.
+   *
+   * The one rule worth stating twice, because it is the trap the SRS itself calls out:
+   * reviews received is NOT reviews where this person is the reviewer. It is reviews
+   * written on submissions this person authored. Those are two different relations,
+   * queried two different ways in the repository.
+   */
+  async getProfile(username: string): Promise<PublicProfile> {
+    const user = await userRepository.findByUsername(username);
+
+    if (!user) {
+      throw new NotFoundError("No user with that username.", "USER_NOT_FOUND");
+    }
+
+    const [reviewsGiven, reviewsReceived, submissions] = await Promise.all([
+      userRepository.findReviewsGivenForInsights(user.id),
+      userRepository.findReviewsReceived(user.id),
+      userRepository.findSubmissionsByAuthor(user.id),
+    ]);
+
+    return {
+      username: user.username,
+      bio: user.bio,
+      techStack: user.techStack,
+      githubUrl: user.githubUrl,
+      karma: user.karma,
+      reviewsGiven: reviewsGiven.length,
+      reviewsReceived: reviewsReceived.length,
+      insights: buildInsights(reviewsGiven),
+      submissions: submissions.map((submission) => ({
+        id: submission.id,
+        title: submission.title,
+        tags: submission.tags,
+        createdAt: submission.createdAt,
+        reviewCount: submission._count.reviews,
+        status: submission._count.reviews === 0 ? "pending" : "reviewed",
+      })),
+      reviewsGivenList: reviewsGiven.map(toReviewGivenItem),
+      reviewsReceivedList: reviewsReceived.map(toReviewReceivedItem),
+    };
   },
 };

@@ -1,16 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
-import {
-  ClerkProvider,
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Nav } from "@/components/Nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,7 +24,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // ClerkProvider wraps everything so any page can ask who is signed in.
-    <ClerkProvider>
+    //
+    // signInUrl and signUpUrl tell Clerk where our own auth pages are. Without them,
+    // anything Clerk redirects to on its own, an expired session or a protected page,
+    // would land on Clerk's hosted screens instead of ours.
+    <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
       <html
         lang="en"
         // The server cannot know which theme the visitor prefers, so next-themes sets it
@@ -39,38 +36,28 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <body className="flex min-h-full flex-col bg-background text-foreground">
+        {/*
+          suppressHydrationWarning is here because browser extensions edit the body tag
+          before React starts. Grammarly, for one, adds data-gr-ext-installed and
+          data-new-gr-c-s-check-loaded, and React then complains that the HTML the
+          server sent does not match what it found in the browser.
+
+          Nothing is actually broken: the attributes are not ours, we cannot stop them
+          being added, and they change nothing about the page. This tells React to
+          ignore attribute differences on this one element only. It does not hide real
+          mismatches anywhere else in the tree.
+        */}
+        <body
+          suppressHydrationWarning
+          className="flex min-h-full flex-col bg-background text-foreground"
+        >
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
             enableSystem={false}
             disableTransitionOnChange
           >
-            <header className="border-b bg-card">
-              <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-6 py-3">
-                <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-                  <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-primary font-mono text-[12px] text-primary-foreground">
-                    C
-                  </span>
-                  CodeCritic
-                </Link>
-
-                <nav className="flex items-center gap-2">
-                  <ThemeToggle />
-
-                  {/* Shown only to visitors who are not signed in. */}
-                  <Show when="signed-out">
-                    <SignInButton />
-                    <SignUpButton />
-                  </Show>
-
-                  {/* Shown only to signed in users. */}
-                  <Show when="signed-in">
-                    <UserButton />
-                  </Show>
-                </nav>
-              </div>
-            </header>
+            <Nav />
 
             {children}
           </ThemeProvider>

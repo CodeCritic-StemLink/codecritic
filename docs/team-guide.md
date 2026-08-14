@@ -128,9 +128,14 @@ reviews rather than typed in.
 | Endpoint | State |
 | --- | --- |
 | `GET /api/health` | Done |
-| `GET /api/submissions` | Works, but plain. Newest first, no ranking, no filters yet. |
+| `GET /api/submissions` | Done. Ranked for signed in users, newest first for visitors. |
 | `POST /api/users/sync` | Done. Creates or updates our User row from the Clerk identity. |
 | `PATCH /api/users/me` | Done. Edits your own profile only. |
+| `GET /api/users/:username` | Done. Public profile with insights and the two review lists. Feature 02. |
+| `GET /api/users/me` | Done. Your own row, for the navigation bar. |
+| `GET /api/submissions/:id` | Written, in review on PR #4. |
+| `POST /api/submissions/:id/reviews` | Written, in review on PR #4. |
+| `POST /api/submissions` | **Not started.** The last missing endpoint. See `aaysha-submission-feature.md`. |
 
 **Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
 is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
@@ -140,15 +145,18 @@ up and account menu.
 
 ### What does not exist yet
 
-| Missing | Owner |
-| --- | --- |
-| `GET /submissions/:id`, `POST /submissions`, `POST /submissions/:id/reviews` | Andrew |
-| `GET /users/:username` and its insights | Aqeel |
-| The ranking engine and the ranked feed | Osini |
-| Every page: feed, detail, post form, review form, profile | Aaysha |
-| Styled sign in and sign up pages on our own routes | Aaysha |
-| Deployment to Render and Vercel | Osini |
-| A SQL dump committed for long term revival | Osini |
+Updated 2026-08-13, in the order it blocks other people.
+
+| Missing | Owner | Blocks |
+| --- | --- | --- |
+| `POST /submissions` and the `/submissions/new` form. Full spec in `aaysha-submission-feature.md`. | **Aaysha, not started** | Everything. Nobody can post a request, so nothing can be reviewed and no Karma can be earned on anything we made in the demo. |
+| PR #4 fixed and merged: the broken anchor tags, the tests that never run, the lockfile churn, and renaming `ReviewCard` so it stops colliding with Aqeel's | **Andrew** | Every card in the feed links to a page that does not exist |
+| Styled sign in and sign up pages on our own routes | Osini, taken over from Aaysha | Nothing, cosmetic |
+| The first release of `develop` into `main` | Osini | Nothing built since Tuesday is on the public site |
+| A SQL dump committed for long term revival | Osini | Nothing |
+
+Done: the ranking engine and the ranked feed with search, filters and paging (Osini);
+profiles, insights and the review lists (Aqeel); Jest across both halves (Aqeel).
 
 **Nobody is blocked.** Every one of those can be started right now against what already exists.
 
@@ -453,10 +461,30 @@ git pull
 Four people editing one repository. These rules exist so we never lose work and never block each
 other.
 
-### Nobody pushes to main. Ever.
+### Two permanent branches, and nobody pushes to either
 
-`main` is the branch that must always work, because it is what gets deployed and what mentors
-look at. All work happens on a branch and arrives through a pull request.
+Since 2026-08-13, merging to `main` puts code in front of the public within two minutes. So `main`
+is no longer where we work.
+
+| Branch | What it is | Who merges into it |
+| --- | --- | --- |
+| `main` | **Production.** Exactly what the public and our mentors see. | Only `develop`, and only when the group agrees |
+| `develop` | **Where everything comes together.** Not public. | Everyone's feature branches |
+| `yourname/thing` | Your own work | Nobody. It gets merged into `develop`. |
+
+**Nobody ever pushes directly to `main` or `develop`.** Both only ever change through a pull
+request.
+
+### Why the extra branch
+
+Without it, the moment anyone merges, the public site changes. One broken merge and the link we
+submitted is broken, possibly while a mentor is looking at it.
+
+With it, four people can merge into `develop` all day and the public site does not move until we
+decide together that it is worth showing.
+
+`develop` is the rehearsal room. `main` is the stage.
+
 
 ### Branch naming
 
@@ -476,8 +504,10 @@ short and in lowercase with hyphens.
 
 ### The loop, every single time
 
+**Start from `develop`, never from `main`:**
+
 ```
-git checkout main
+git checkout develop
 git pull
 git checkout -b yourname/what-you-are-doing
 ```
@@ -486,14 +516,47 @@ Do the work. Then:
 
 ```
 git add .
-git commit -m "Add the review endpoint with full validation"
+git commit -m "feat: add the review endpoint with full validation"
 git push -u origin yourname/what-you-are-doing
 ```
 
-Then open a pull request on GitHub, ask someone to review it, and merge once approved.
+Then open a pull request. **Check the base branch says `develop`, not `main`.** GitHub should
+default to it, but look every single time.
 
-In GitHub Desktop the same thing is: **Current branch**, then **New branch**, do the work, write
-a summary, **Commit**, **Publish branch**, **Create Pull Request**.
+In GitHub Desktop: **Current branch**, switch to `develop`, **Fetch origin**, then **New branch**,
+do the work, write a summary, **Commit**, **Publish branch**, **Create Pull Request**.
+
+### Releasing to the public site
+
+When the group agrees `develop` is in good shape:
+
+1. Open a pull request from `develop` into `main`
+2. Everyone looks at it. This is the one that changes the live site.
+3. Merge. Render and Vercel deploy on their own within two minutes.
+4. Open https://codecritic-jade.vercel.app and check it actually works
+
+Do this at least once a day, so `main` never falls far behind. A release carrying two days of
+changes is a release nobody can review properly.
+
+### If your branch falls behind
+
+Somebody merged into `develop` while you were working. Bring their changes into your branch before
+opening the pull request:
+
+```
+git checkout develop
+git pull
+git checkout yourname/what-you-are-doing
+git merge develop
+```
+
+If git reports a conflict, open the file. Both versions are marked inside it. Keep what belongs,
+delete the markers, then `git add` that file and `git commit`.
+
+**Never use `git push --force` on this project.** It rewrites history and can delete work somebody
+else has already pulled. If something looks broken enough that force pushing seems like the answer,
+stop and ask in the group chat.
+
 
 ### Commit messages
 
@@ -655,14 +718,23 @@ client seeing nothing.
 Two reasons: `src` stays the shipped application and nothing else, and the build physically cannot
 include a test file because they are outside the folder it compiles.
 
-Run them with `npm test`, from `backend`. We use Node's own test runner through tsx, so there is
-no test framework installed and no config file to explain.
+Run them with `npm test`, from `backend`. We use Jest, because that is what the programme
+teaches. `jest.config.js` points it at `tests/`. Jest runs test files through `@swc/jest`, not
+`ts-jest`: this project is on TypeScript 7, which does not expose the Compiler API `ts-jest`
+needs, and swc strips types without type-checking, which is fine because `npm run typecheck`
+already covers that separately.
 
 Run `npm run typecheck` before opening a pull request. It checks both `src` and `tests`.
 
+The tests must keep running with no `DATABASE_URL` set. That is what makes them runnable
+anywhere, including a fresh clone or CI, without a live database. Every test file is pure logic
+with no Prisma import, the same reason `ranking.service.ts` and `insights.service.ts` stand alone
+from their repositories.
+
 Not everything gets an automated test. What each person does:
 
-- **Automated unit tests** for pure logic with no database in it. Right now that is the ranking.
+- **Automated unit tests** for pure logic with no database in it. Right now that is the ranking
+  (Feature 01) and the profile insight counting (Feature 02).
 - **Manual API tests** for everything else, written into `docs/test-plan.md` with the exact
   command, the expected result and the real result.
 - **A shared Postman collection**, so mentors testing our API directly have something to import.
@@ -703,7 +775,7 @@ did not write.
 | Layer | Work |
 | --- | --- |
 | Back end | `POST /submissions`, with all five validation rules |
-| Front end | `/submissions/new`, with criteria you can add and remove between 1 and 5. Plus styled sign in and sign up pages on our own routes, and the call to `POST /users/sync` after a first sign in. |
+| Front end | `/submissions/new`, with criteria you can add and remove between 1 and 5. |
 | Tests | Empty title rejected, six criteria rejected, bad repo URL rejected, no tags rejected, no token rejected |
 
 **Andrew: reviewing**
@@ -741,7 +813,7 @@ on its own small pull request, and then nobody touches it again.
 
 | File | Rule |
 | --- | --- |
-| `backend/src/routes/users.ts` | Osini owns sync and me. Aqeel adds the profile route below the marked comment. |
+| `backend/src/routes/user.routes.ts` | Osini owns sync and me. Aqeel's `GET /:username` is added, Feature 02, done. |
 | `frontend/src/lib/api/` | One file per resource. Never put two people's calls in one file. |
 | `frontend/src/app/globals.css` | Theme changes only, and say so in the chat first. Everyone renders through it. |
 | `backend/prisma/schema.prisma` | Schema changes go through the group. A migration nobody expected breaks three machines. |
@@ -788,62 +860,26 @@ Deployed link, repository link, design documents. Everyone submits from their ow
 
 ## 12. How this gets onto the internet
 
-Three separate things get hosted.
+**Done. The site is live.**
 
-| Part | Host | Notes |
-| --- | --- | --- |
-| Database | Neon | Already live |
-| Back end | Render | Free tier. Sleeps when idle and takes about 30 seconds to wake. |
-| Front end | Vercel | Free tier |
-
-### Back end on Render
-
-Create a Web Service pointing at the repository, then:
-
-| Setting | Value |
+| What | Link |
 | --- | --- |
-| Root directory | `backend` |
-| Build command | `npm install && npx prisma generate && npm run build` |
-| Start command | `npx prisma migrate deploy && npm start` |
+| The site, and the only link we submit | https://codecritic-jade.vercel.app |
+| The API | https://codecritic-api.onrender.com |
 
-Environment variables to set there: `DATABASE_URL`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`,
-and `CORS_ORIGIN` set to the Vercel URL once we have it.
+Front end on Vercel, API on Render in Singapore, database on Neon in Singapore. Both hosts watch
+`main` and deploy on their own when something is merged.
 
-**Two traps to expect.** First, `npx prisma generate` must be in the build command, because the
-generated client is not committed. Skip it and the build succeeds locally and fails on Render
-with "cannot find module". Second, `prisma migrate deploy` is what creates the tables on the live
-database. It is a different command from `migrate dev` and does not try to create new migration
-files.
+**Full detail is in [deployment.md](deployment.md):** why we chose each service, every setting,
+the environment variables, how CORS works and why the feed worked before we configured it, the
+keepalive robot that stops the API sleeping, and a troubleshooting table.
 
-### Front end on Vercel
+Two things everyone should know:
 
-Import the repository, then:
-
-| Setting | Value |
-| --- | --- |
-| Root directory | `frontend` |
-| Framework | Next.js, detected automatically |
-
-Environment variables: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, and
-`NEXT_PUBLIC_API_URL` set to the Render URL plus `/api`.
-
-### Order of operations, because these depend on each other
-
-1. Deploy the back end to Render, get its URL
-2. Deploy the front end to Vercel with `NEXT_PUBLIC_API_URL` pointing at that Render URL
-3. Go back to Render and set `CORS_ORIGIN` to the Vercel URL
-4. In Clerk, create the Production instance, add the Vercel domain, and swap the `pk_live_` and
-   `sk_live_` keys into both hosts
-
-Step 3 catches everyone. Without it the browser blocks every request and the site looks broken
-with no obvious cause.
-
-### Keeping it alive for the long term
-
-The free tiers will not last forever. What makes this project revivable is that it uses plain
-PostgreSQL through Prisma, so moving to any other host is one connection string. Before we
-submit, we also export a SQL dump of the schema and demo data and commit it, so anyone can
-rebuild the whole thing from the repository alone.
+- **Merging to `main` puts code in front of the public within two minutes.** That is why `main` is
+  protected by the branch flow in section 8.
+- **Every pull request gets its own preview site** from Vercel, linked in a comment on the pull
+  request. Open that link to review someone's work instead of pulling their branch.
 
 ---
 

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>CodeCritic</title>
+
+  <!--
+    A speech bubble with code inside it: reviewing is code plus conversation.
+
+    Filled tile rather than a bare outline, because a browser tab can be light or
+    dark and only a solid shape is legible on both. Teal is 0E7C74, the same primary
+    the rest of the site uses.
+
+    Careful with comments in here. Two hyphens in a row are illegal inside an XML
+    comment, so a stray one silently breaks the whole file and the icon disappears.
+  -->
+
+  <rect width="32" height="32" rx="7" fill="#0E7C74" />
+
+  <path
+    d="M7 8.5h18a1.5 1.5 0 0 1 1.5 1.5v10a1.5 1.5 0 0 1-1.5 1.5H13.2L9 25.5V21.5H7A1.5 1.5 0 0 1 5.5 20V10A1.5 1.5 0 0 1 7 8.5Z"
+    fill="#FFFFFF"
+  />
+
+  <g
+    fill="none"
+    stroke="#0E7C74"
+    stroke-width="1.9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M12.3 12.4 9 15.1l3.3 2.7" />
+    <path d="M19.7 12.4 23 15.1l-3.3 2.7" />
+    <path d="M17 11.6l-2 7" />
+  </g>
+</svg>

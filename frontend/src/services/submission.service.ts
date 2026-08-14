@@ -48,6 +48,48 @@ export type FeedFilters = {
   page?: number;
 };
 
+/** One score on the detail page: the criterion's own label, so the front end never
+ * has to join it back against a separate criteria list. */
+export type ReviewRating = {
+  criterionId: string;
+  label: string;
+  score: number;
+};
+
+export type SubmissionReview = {
+  id: string;
+  strengths: string;
+  improvements: string;
+  resources: string[];
+  createdAt: string;
+  reviewer: { username: string; karma: number };
+  ratings: ReviewRating[];
+};
+
+export type SubmissionDetail = {
+  id: string;
+  title: string;
+  description: string;
+  repoUrl: string;
+  tags: string[];
+  createdAt: string;
+  author: { username: string; karma: number; techStack: string[] };
+  status: "pending" | "reviewed";
+  criteria: Criterion[];
+  reviews: SubmissionReview[];
+  /** Whether this signed in viewer wrote the submission, and whether they already reviewed it. */
+  viewer: { isAuthor: boolean; hasReviewed: boolean };
+};
+
+/**
+ * One review request in full: criteria, every review, every rating. Optional auth,
+ * same as the feed — a visitor can read a request without an account, and a signed in
+ * viewer additionally gets the two flags that decide whether to show the review form.
+ */
+export function getSubmission(id: string, token?: string | null): Promise<SubmissionDetail> {
+  return apiFetch<SubmissionDetail>(`/submissions/${id}`, { token });
+}
+
 /**
  * The feed.
  *
@@ -64,5 +106,52 @@ export function getFeed(filters: FeedFilters = {}, token?: string | null): Promi
       page: filters.page ?? 1,
       limit: FEED_PAGE_SIZE,
     },
+  });
+}
+
+/**
+ * What the post-a-request form sends. Matches POST /submissions in api-design.md exactly:
+ * title, description, repoUrl, 1 to 10 tags, 1 to 5 criteria labels.
+ *
+ * No authorId here on purpose. The API takes the author from the verified Clerk token and
+ * ignores anything the body sends for it, so there is nothing to put here even if we wanted to.
+ */
+export type CreateSubmissionInput = {
+  title: string;
+  description: string;
+  repoUrl: string;
+  tags: string[];
+  criteria: string[];
+};
+
+/*
+ * There is deliberately only one SubmissionDetail in this file.
+ *
+ * There were briefly two: one added with the detail page and one with the post form,
+ * declared a hundred lines apart in the same file by two people who could not see each
+ * other's work. TypeScript refuses a duplicate identifier, which is what broke the
+ * Vercel build.
+ *
+ * The one kept is the fuller one above, because it is the shape the API actually
+ * returns: it carries `reviews` and `viewer`, and the other claimed neither. Posting a
+ * request reads only `id` off the response, so nothing is lost.
+ */
+
+/**
+ * Posts a new review request.
+ *
+ * Requires a token: the API answers 401 without one. Every validation rule in
+ * api-design.md (INVALID_TITLE, INVALID_DESCRIPTION, INVALID_REPO_URL, INVALID_TAGS,
+ * INVALID_CRITERIA) runs server side, so a caught ApiError here carries the real reason,
+ * not a guess the form made up.
+ */
+export function createSubmission(
+  input: CreateSubmissionInput,
+  token: string
+): Promise<SubmissionDetail> {
+  return apiFetch<SubmissionDetail>("/submissions", {
+    method: "POST",
+    token,
+    body: input,
   });
 }

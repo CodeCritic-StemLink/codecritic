@@ -139,18 +139,38 @@ test framework installed and no config file.
 `npm run typecheck` checks both `src` and `tests`, using `tsconfig.test.json`. Run it before
 opening a pull request.
 
-**Test framework: decided later.** The group's intention is to move to Jest. Node's built in
-runner is in place for now so the Feature 01 tests exist and pass, and the `tests/` folder is
-already where Jest would expect to find things.
+**Test framework: Jest. Decided 2026-08-13.**
 
-Two things to know when we make the switch. The 19 existing tests would need converting from
-`node:test` to Jest, which is mechanical but not free, roughly half an hour. And Jest on a
-TypeScript project needs `ts-jest` and a config file, which is the usual place people lose time.
+The programme teaches Jest, so we use Jest. That is the reason, and it is a good one: our code
+should look like the code our mentors demonstrate.
 
-Nothing in the class notes requires a unit test framework. What the programme teaches under
-testing is a **Postman collection** with `baseUrl` and token as collection variables, which our
-mentors can import and fire at the API directly. That is the deliverable that is actually
-expected, and it should be built before we spend time on framework choices.
+**Where we are right now.** The existing tests use Node's built in runner, because it needed no
+setup and got the Feature 01 tests written on day one. The `tests/` folder is already laid out
+the way Jest expects, so nothing has to move.
+
+**How we switch, and when.** In one change, not piecemeal. Converting file by file across
+different people's pull requests means half the suite runs one way and half the other, and
+nobody can tell what is passing.
+
+The switch is:
+
+1. `npm install -D jest ts-jest @types/jest`
+2. A `jest.config.js` pointing at `tests/`
+3. Convert the assertions. `test(...)` stays, `assert.equal(a, b)` becomes
+   `expect(a).toBe(b)`, `assert.deepEqual` becomes `expect(a).toEqual(b)`. Mechanical.
+4. `npm test` becomes `jest`
+
+Until that happens, **write new tests in the existing style and put them in `tests/`.** They will
+be converted with everything else in one sweep.
+
+**Two things to know when we do it.** Jest on a TypeScript project needs `ts-jest` and a config
+file, which is the usual place people lose an afternoon. And every test file has to be converted
+at once or `npm test` reports a confusing half truth.
+
+**Separately: the Postman collection.** What the programme teaches under the heading of testing is
+a Postman collection with `baseUrl` and the token as collection variables, which mentors import
+and fire at the API directly. That is still on the list and is a different deliverable from unit
+tests.
 
 ### The import rules
 
