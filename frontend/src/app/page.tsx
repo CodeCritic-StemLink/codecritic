@@ -8,6 +8,7 @@ import { FeedFilters } from "@/components/FeedFilters";
 import { FeedSearch } from "@/components/FeedSearch";
 import { FeedPagination } from "@/components/FeedPagination";
 import { FeedSidebar } from "@/components/FeedSidebar";
+import { PageShell } from "@/components/PageShell";
 import { feedUrl } from "@/lib/feedUrl";
 import type { FeedParams } from "@/lib/feedUrl";
 
@@ -52,10 +53,10 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
 
   if (failure || !feed) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-6 py-16">
+      <PageShell>
         <h1 className="text-xl font-semibold">The feed could not load</h1>
         <p className="mt-2 text-sm text-muted-foreground">{failure}</p>
-      </main>
+      </PageShell>
     );
   }
 
@@ -69,7 +70,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
   const isFiltered = Boolean(params.search || params.tag || params.status || params.page);
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] px-6 py-8">
+    <PageShell>
       {needsProfile ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-primary bg-accent p-4">
           <div>
@@ -101,12 +102,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
         </div>
 
         <div className="min-w-0 xl:col-start-2 xl:row-start-1">
-          <FeedSearch
-            defaultValue={params.search}
-            status={params.status}
-            tag={params.tag}
-            why={params.why}
-          />
+          <FeedSearch params={params} />
 
           <div className="mt-5 mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -123,13 +119,29 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
             {feed.personalised ? (
               <Link
                 href={feedUrl(params, { why: showScore ? null : "1" })}
-                className="flex shrink-0 items-center gap-1.5 rounded-md border border-primary px-3 py-1.5 text-[12.5px] text-primary transition-colors hover:bg-accent"
+                className={[
+                  "flex shrink-0 items-center gap-1.5 rounded-md border px-3 py-1.5 text-[12.5px] transition-colors",
+                  showScore
+                    ? "border-primary bg-primary text-primary-foreground hover:opacity-90"
+                    : "border-primary text-primary hover:bg-accent",
+                ].join(" ")}
               >
                 <Calculator className="size-3.5" aria-hidden />
-                {showScore ? "Hide the maths" : "Why this order?"}
+                {showScore ? "Hide the reasons" : "Why this order?"}
               </Link>
             ) : null}
           </div>
+
+          {/*
+            One line of context, only while the explanation is on. It was a three line
+            panel, which was more reading than the thing it explained.
+          */}
+          {showScore ? (
+            <p className="mb-4 rounded-md border border-dashed px-3 py-2 text-[12.5px] text-muted-foreground">
+              Higher score first. Points come from the technologies on your profile, how
+              recent a request is, and whether anybody has answered it.
+            </p>
+          ) : null}
 
           {feed.submissions.length === 0 ? (
             <div className="rounded-[var(--radius)] border border-dashed p-10 text-center">
@@ -175,6 +187,6 @@ export default async function FeedPage({ searchParams }: PageProps<"/">) {
           />
         </div>
       </div>
-    </main>
+    </PageShell>
   );
 }
