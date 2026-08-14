@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
 import { BrandMark } from "@/components/BrandMark";
+import { UserMenu } from "@/components/UserMenu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
 import { getMe } from "@/services/user.service";
@@ -59,16 +59,23 @@ export async function Nav() {
 
           {!userId ? (
             <>
-              <SignInButton mode="modal">
-                <button className="rounded-lg border px-3 py-1.5 text-[13.5px] font-medium transition-colors hover:border-primary">
-                  Sign in
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="rounded-lg bg-primary px-3 py-1.5 text-[13.5px] font-semibold text-primary-foreground">
-                  Sign up
-                </button>
-              </SignUpButton>
+              {/*
+                Plain links to our own pages, not Clerk's modal. A real URL can be
+                bookmarked, opened in a new tab, and linked to from an email, and it
+                is what lets sign up redirect to profile setup afterwards.
+              */}
+              <Link
+                href="/sign-in"
+                className="rounded-lg border px-3 py-1.5 text-[13.5px] font-medium transition-colors hover:border-primary"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="rounded-lg bg-primary px-3 py-1.5 text-[13.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Sign up
+              </Link>
             </>
           ) : null}
 
@@ -87,7 +94,7 @@ export async function Nav() {
           ) : null}
 
           {userId ? (
-            <UserButton appearance={{ elements: { userButtonAvatarBox: "size-[30px]" } }} />
+            <UserMenu />
           ) : null}
         </div>
       </div>

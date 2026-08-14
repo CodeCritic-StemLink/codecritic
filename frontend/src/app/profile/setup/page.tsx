@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { syncProfile } from "@/services/user.service";
+import { getMe, syncProfile } from "@/services/user.service";
 import { ApiError } from "@/api/api";
 
 // Finish setting up your profile.
@@ -18,6 +18,12 @@ import { ApiError } from "@/api/api";
 //
 // It is a client component because it holds what you are typing and calls the API when
 // you press the button. Everything else in this app stays a server component.
+//
+// It doubles as the edit form for somebody who already has a profile, which is why it
+// loads the existing one first. Without that it was a trap: POST /users/sync upserts,
+// so a returning visitor who opened this URL and submitted would have overwritten
+// their bio, tech stack and GitHub link with the blank fields they were shown. Karma
+// and submissions were never at risk, because the upsert does not touch them.
 
 /** Suggested technologies. Clicking one adds it, nobody has to type them all. */
 const SUGGESTIONS = [
@@ -45,6 +51,46 @@ export default function ProfileSetupPage() {
   const [techStack, setTechStack] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Null until we know: undecided, rather than "has no profile".
+  const [existing, setExisting] = useState<boolean | null>(null);
+
+  /*
+   * Load the profile this person already has, if any, and put it in the form.
+   *
+   * A 404 here is the normal first time case, not a failure: the Clerk account exists
+   * but POST /users/sync has never run, so there is no row yet. Anything else is left
+   * to the submit handler to report, because a profile that will not load is not worth
+   * blocking a first time visitor over.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadExisting() {
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        const { user: mine } = await getMe(token);
+        if (cancelled) return;
+
+        setUsername(mine.username);
+        setBio(mine.bio ?? "");
+        setGithubUrl(mine.githubUrl ?? "");
+        setTechStack(mine.techStack ?? []);
+        setExisting(true);
+      } catch {
+        if (!cancelled) setExisting(false);
+      }
+    }
+
+    void loadExisting();
+
+    // Guards against setting state after the page has been navigated away from.
+    return () => {
+      cancelled = true;
+    };
+  }, [getToken]);
 
   function toggleTech(tech: string) {
     setTechStack((current) =>
@@ -107,9 +153,13 @@ export default function ProfileSetupPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-6 py-10">
-      <h1 className="text-[21px] font-semibold tracking-tight">Finish your profile</h1>
+      <h1 className="text-[21px] font-semibold tracking-tight">
+        {existing ? "Edit your profile" : "Finish your profile"}
+      </h1>
       <p className="mt-1 text-[13.5px] text-muted-foreground">
-        The technologies you pick are what the feed uses to sort requests for you.
+        {existing
+          ? "Change anything here and save. Your Karma and everything you have posted stay as they are."
+          : "The technologies you pick are what the feed uses to sort requests for you."}
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 rounded-[var(--radius)] border bg-card p-5">
@@ -189,7 +239,7 @@ export default function ProfileSetupPage() {
         ) : null}
 
         <Button type="submit" disabled={saving || username.trim().length < 3} className="w-full">
-          {saving ? "Saving" : "Save and see my feed"}
+          {saving ? "Saving" : existing ? "Save changes" : "Save and see my feed"}
         </Button>
       </form>
     </main>
