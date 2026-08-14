@@ -191,7 +191,7 @@ export function SubmissionForm() {
           className="flex items-center gap-1 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
         >
           <RotateCcw className="size-3.5" aria-hidden />
-          Reset form
+          Reset
         </button>
       </div>
 
