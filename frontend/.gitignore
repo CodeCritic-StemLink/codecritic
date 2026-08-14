@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# archives. A zip of src was committed by accident once, and git never forgets.
+*.zip
+*.rar
+*.7z

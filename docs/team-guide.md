@@ -775,7 +775,7 @@ did not write.
 | Layer | Work |
 | --- | --- |
 | Back end | `POST /submissions`, with all five validation rules |
-| Front end | `/submissions/new`, with criteria you can add and remove between 1 and 5. 
+| Front end | `/submissions/new`, with criteria you can add and remove between 1 and 5. |
 | Tests | Empty title rejected, six criteria rejected, bad repo URL rejected, no tags rejected, no token rejected |
 
 **Andrew: reviewing**
