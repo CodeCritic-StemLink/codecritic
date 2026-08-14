@@ -87,14 +87,152 @@ stripped, because authentication is checked first. That test needs a real token 
 
 ## Osini: the feed and Feature 01
 
-To write. Must cover:
+Run against the local API on port 4000 with the seed data loaded, on 2026-08-13.
 
-- The feed works with no token, newest first
-- The same feed with a token for a React developer puts React tagged submissions first
-- The same feed with a token for a Node developer puts a different submission first
-- The score breakdown adds up: tag points, recency points and needs help points equal the total
-- A submission with no reviews outranks an equally matched one that has reviews
-- Automated tests for the ranking function itself
+### The ranking maths, automated
+
+    cd backend
+    npx jest tests/services/ranking.service.test.ts
+
+Actual:
+
+    Test Suites: 1 passed, 1 total
+    Tests:       19 passed, 19 total
+
+Those 19 cover the parts a curl command cannot show: that the three pieces of the score
+add up to the total, that one matching tag beats the entire recency range, that an
+unreviewed submission outranks an equally matched reviewed one, and that the needs-help
+bonus never outranks a genuine extra tag match. They need no database, which is why they
+run anywhere.
+
+Pass
+
+### The feed works logged out, newest first
+
+Command:
+
+    curl -s "http://localhost:4000/api/submissions?limit=3"
+
+Actual, trimmed:
+
+    personalised: False | total: 10
+      2026-08-11  React dashboard that re-renders way too often
+      2026-08-11  Express REST API for a bookstore
+      2026-08-11  Migrating a Pages Router app to the App Router
+
+`personalised` is false with no token, which is what the SRS requires of the public
+feed, and the order is by date.
+
+Pass
+
+### Filters work, and they combine
+
+Command, four times:
+
+    curl -s "http://localhost:4000/api/submissions?tag=Node"
+    curl -s "http://localhost:4000/api/submissions?status=pending"
+    curl -s "http://localhost:4000/api/submissions?tag=Node&status=pending"
+    curl -s "http://localhost:4000/api/submissions?search=prisma"
+
+Actual, the `total` from each:
+
+    tag=Node                 -> 3
+    status=pending           -> 3
+    tag=Node&status=pending  -> 1
+    search=prisma            -> 1
+
+The third line is the one that matters. Two filters together give fewer results than
+either alone, so they narrow the set rather than replacing each other.
+
+Pass
+
+### Paging returns different submissions, not the same ones again
+
+Command:
+
+    curl -s "http://localhost:4000/api/submissions?limit=3&page=1"
+    curl -s "http://localhost:4000/api/submissions?limit=3&page=2"
+    curl -s "http://localhost:4000/api/submissions?limit=3&page=4"
+
+Actual:
+
+    page 1 -> 3 items (total 10)
+    page 2 -> 3 items (total 10)
+    page 4 -> 1 items (total 10)
+
+Ten submissions in pages of three gives 3, 3, 3 and then 1, which is what came back.
+
+Worth knowing for the walkthrough: the service ranks the whole matching set and only
+then cuts the page out. Slicing first and ranking after would return a page chosen by
+date and merely shuffled, which would make Feature 01 wrong on any feed longer than one
+page.
+
+Pass
+
+### Rubbish in the query string is rejected
+
+Command:
+
+    curl -s "http://localhost:4000/api/submissions?page=0"
+    curl -s "http://localhost:4000/api/submissions?limit=999"
+    curl -s "http://localhost:4000/api/submissions?status=banana"
+    curl -s "http://localhost:4000/api/submissions?tag="
+
+Actual, all four returning 400:
+
+    ?page=0        -> INVALID_PAGE   | Too small: expected number to be >=1
+    ?limit=999     -> INVALID_PAGE   | Too big: expected number to be <=50
+    ?status=banana -> INVALID_STATUS | Invalid option: expected one of "pending"|"reviewed"
+    ?tag=          -> INVALID_TAGS   | Too small: expected string to have >=1 characters
+
+`limit` is capped at 50 so nobody can ask for the whole database in one request.
+
+**A bug this test found.** Before 2026-08-13 every one of these reported
+`INVALID_TAGS`, because the feed controller hardcoded that one code for any query
+failure. So `?page=0` blamed the tags. An error code naming the wrong field is worse
+than no code, because it sends whoever is debugging to the wrong place. Fixed by mapping
+the failed field to its own code in `feedErrorCodes`, the same pattern
+`profileErrorCodes` already used.
+
+Pass
+
+### The URL is the state, checked automatically
+
+    cd frontend
+    npm test
+
+Actual:
+
+    Test Suites: 2 passed, 2 total
+    Tests:       30 passed, 30 total
+
+Every filter on the feed lives in the address bar rather than in React state, which is
+what keeps the page a server component and makes a filtered feed a real link. The tests
+pin the rules that holds up:
+
+- changing one filter never throws away the others
+- `undefined` means leave a filter alone, `null` means clear it
+- changing a filter returns you to page one, so you never land on page 5 of a 3 page
+  result and see a blank screen
+- the "Why this order?" toggle does not reset the page, because it changes no results
+
+**A bug these tests found.** `feedUrl` documented that `undefined` meant "leave this
+filter alone", but the code cleared it, because spreading an object copies keys whose
+value is `undefined` over the top of real ones. Nothing in the app passed `undefined`
+yet, so nothing was visibly broken, but the function promised behaviour it did not have.
+
+Pass
+
+### Still to do
+
+The two checks that need a signed in user, because they need a real Clerk token:
+
+- a React developer's feed puts React tagged submissions first
+- a Node developer's feed puts a different submission first, from the same set
+
+The ranking maths behind both is covered by the 19 unit tests above. What is not yet
+written up is the end to end proof through the API with a token, and the screenshot of
+the "Why this order?" breakdown. Do this once the demo accounts are signed in.
 
 ---
 

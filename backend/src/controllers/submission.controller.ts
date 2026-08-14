@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 
 import { submissionService } from "../services/submission.service";
 import { getOptionalUser } from "../middlewares/auth.middleware";
-import { feedQuerySchema } from "../models/submission.schema";
+import { feedQuerySchema, feedErrorCodes } from "../models/submission.schema";
 import { BadRequestError } from "../errors/appError";
 
 // Controllers unpack the request, validate it, call a service, send the response.
@@ -20,9 +20,11 @@ export const submissionController = {
 
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
+      const field = issue?.path[0] as keyof typeof feedErrorCodes;
+
       throw new BadRequestError(
         issue?.message ?? "Those filters are not valid.",
-        "INVALID_TAGS"
+        feedErrorCodes[field] ?? "INVALID_TAGS"
       );
     }
 

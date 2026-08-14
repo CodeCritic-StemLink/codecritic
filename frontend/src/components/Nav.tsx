@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 
+import { BrandMark } from "@/components/BrandMark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
 import { getMe } from "@/services/user.service";
@@ -39,11 +40,15 @@ export async function Nav() {
 
   return (
     <header className="border-b bg-card">
-      <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-4 px-6 py-3">
+      {/*
+        Matches the page containers below it. If the header is narrower than the page,
+        the brand mark stops lining up with the content, which is the kind of thing
+        that looks broken without anybody being able to say why.
+      */}
+      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="grid h-[22px] w-[22px] place-items-center rounded-md bg-primary font-mono text-[12px] text-primary-foreground">
-            C
-          </span>
+          {/* The same mark as the browser tab icon, so the two agree. */}
+          <BrandMark />
           CodeCritic
         </Link>
 

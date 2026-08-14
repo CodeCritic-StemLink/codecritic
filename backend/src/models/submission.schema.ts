@@ -23,3 +23,18 @@ export const feedQuerySchema = z.object({
 });
 
 export type FeedQuery = z.infer<typeof feedQuerySchema>;
+
+/**
+ * Maps a failed feed filter to the error code the front end expects.
+ *
+ * Without this the controller reported INVALID_TAGS for every query failure, so
+ * ?page=0 blamed the tags. An error code that names the wrong field is worse than no
+ * code at all: it sends whoever is debugging to the wrong place.
+ */
+export const feedErrorCodes = {
+  search: "INVALID_TAGS",
+  tag: "INVALID_TAGS",
+  status: "INVALID_STATUS",
+  page: "INVALID_PAGE",
+  limit: "INVALID_PAGE",
+} as const;

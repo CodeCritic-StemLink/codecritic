@@ -32,7 +32,21 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       >
-        <body className="flex min-h-full flex-col bg-background text-foreground">
+        {/*
+          suppressHydrationWarning is here because browser extensions edit the body tag
+          before React starts. Grammarly, for one, adds data-gr-ext-installed and
+          data-new-gr-c-s-check-loaded, and React then complains that the HTML the
+          server sent does not match what it found in the browser.
+
+          Nothing is actually broken: the attributes are not ours, we cannot stop them
+          being added, and they change nothing about the page. This tells React to
+          ignore attribute differences on this one element only. It does not hide real
+          mismatches anywhere else in the tree.
+        */}
+        <body
+          suppressHydrationWarning
+          className="flex min-h-full flex-col bg-background text-foreground"
+        >
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
