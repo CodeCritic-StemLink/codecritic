@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
+import { Plus } from "lucide-react";
 
 import { BrandMark } from "@/components/BrandMark";
 import { UserMenu } from "@/components/UserMenu";
@@ -41,20 +42,30 @@ export async function Nav() {
   return (
     <header className="border-b bg-card">
       {/*
-        Matches the page containers below it. If the header is narrower than the page,
-        the brand mark stops lining up with the content, which is the kind of thing
-        that looks broken without anybody being able to say why.
+        The same width and padding as PageShell. If the header is narrower than the page
+        under it, the brand mark stops lining up with the content, which is the kind of
+        thing that looks broken without anybody being able to say why.
+
+        gap-2 on a phone rather than gap-4. Everything in the right hand group has to
+        fit beside the brand at 320px, and the old spacing pushed the avatar off the
+        edge: the karma chip and "Post a request" are both whitespace-nowrap, so
+        instead of wrapping they simply overflowed the header.
       */}
-      <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-4 px-6 py-3">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+      <div className="mx-auto flex w-full max-w-[1800px] items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6 lg:px-8 2xl:px-12">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
+        >
           {/* The same mark as the browser tab icon, so the two agree. */}
           <BrandMark />
-          CodeCritic
+          {/* The word goes below sm; the mark alone is still recognisable and buys
+              back about 90px, which is the difference between fitting and not. */}
+          <span className="hidden sm:inline">CodeCritic</span>
         </Link>
 
         <NavLinks username={me?.username} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <ThemeToggle />
 
           {!userId ? (
@@ -63,16 +74,21 @@ export async function Nav() {
                 Plain links to our own pages, not Clerk's modal. A real URL can be
                 bookmarked, opened in a new tab, and linked to from an email, and it
                 is what lets sign up redirect to profile setup afterwards.
+
+                Sign in is hidden on the smallest screens rather than shrunk. Sign up
+                leads to the same place for somebody who already has an account, and
+                two buttons of equal weight in a 320px bar is what made this look
+                cramped in the first place.
               */}
               <Link
                 href="/sign-in"
-                className="rounded-lg border px-3 py-1.5 text-[13.5px] font-medium transition-colors hover:border-primary"
+                className="rounded-lg border px-3 py-1.5 text-[13.5px] font-medium transition-colors hover:border-primary max-[420px]:hidden"
               >
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-lg bg-primary px-3 py-1.5 text-[13.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                className="whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-[13.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90"
               >
                 Sign up
               </Link>
@@ -81,21 +97,30 @@ export async function Nav() {
 
           {me ? (
             <>
+              {/* The number is the point of the chip, so the word "Karma" is what
+                  goes when there is no room for both. */}
               <span className="whitespace-nowrap rounded-full border border-karma bg-karma-foreground px-2.5 py-0.5 font-mono text-[12px] text-karma">
-                {me.karma} Karma
+                {me.karma}
+                <span className="hidden sm:inline"> Karma</span>
               </span>
+
+              {/*
+                A labelled button on a tablet and up, a plus on a phone. Same link,
+                same destination; aria-label keeps it announced properly for anyone
+                who cannot see the icon.
+              */}
               <Link
                 href="/submissions/new"
-                className="whitespace-nowrap rounded-lg bg-primary px-3 py-1.5 text-[13.5px] font-semibold text-primary-foreground"
+                aria-label="Post a request"
+                className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-primary px-2.5 py-1.5 text-[13.5px] font-semibold text-primary-foreground transition-opacity hover:opacity-90 sm:px-3"
               >
-                Post a request
+                <Plus className="size-4 sm:hidden" aria-hidden />
+                <span className="hidden sm:inline">Post a request</span>
               </Link>
             </>
           ) : null}
 
-          {userId ? (
-            <UserMenu />
-          ) : null}
+          {userId ? <UserMenu /> : null}
         </div>
       </div>
     </header>
