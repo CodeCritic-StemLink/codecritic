@@ -24,7 +24,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // ClerkProvider wraps everything so any page can ask who is signed in.
-    <ClerkProvider>
+    //
+    // signInUrl and signUpUrl tell Clerk where our own auth pages are. Without them,
+    // anything Clerk redirects to on its own, an expired session or a protected page,
+    // would land on Clerk's hosted screens instead of ours.
+    <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
       <html
         lang="en"
         // The server cannot know which theme the visitor prefers, so next-themes sets it
