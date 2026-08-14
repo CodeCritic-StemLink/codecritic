@@ -5,6 +5,7 @@ import { submissionService } from "../services/submission.service";
 import { getOptionalUser, requireUser } from "../middlewares/auth.middleware";
 import {
   feedQuerySchema,
+  feedErrorCodes,
   createSubmissionSchema,
   createSubmissionErrorCodes,
 } from "../models/submission.schema";
@@ -35,9 +36,11 @@ export const submissionController = {
 
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
+      const field = issue?.path[0] as keyof typeof feedErrorCodes;
+
       throw new BadRequestError(
         issue?.message ?? "Those filters are not valid.",
-        "INVALID_TAGS"
+        feedErrorCodes[field] ?? "INVALID_TAGS"
       );
     }
 

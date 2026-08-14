@@ -131,7 +131,11 @@ reviews rather than typed in.
 | `GET /api/submissions` | Done. Ranked for signed in users, newest first for visitors. |
 | `POST /api/users/sync` | Done. Creates or updates our User row from the Clerk identity. |
 | `PATCH /api/users/me` | Done. Edits your own profile only. |
-| `GET /api/users/:username` | Done. Public profile with insights. Feature 02. |
+| `GET /api/users/:username` | Done. Public profile with insights and the two review lists. Feature 02. |
+| `GET /api/users/me` | Done. Your own row, for the navigation bar. |
+| `GET /api/submissions/:id` | Written, in review on PR #4. |
+| `POST /api/submissions/:id/reviews` | Written, in review on PR #4. |
+| `POST /api/submissions` | **Not started.** The last missing endpoint. See `aaysha-submission-feature.md`. |
 
 **Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
 is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
@@ -141,15 +145,18 @@ up and account menu.
 
 ### What does not exist yet
 
-| Missing | Owner |
-| --- | --- |
-| `POST /submissions`, with its validation rules, and the `/submissions/new` post form | Aaysha |
-| `GET /submissions/:id`, `POST /submissions/:id/reviews` with the Karma transaction, the detail page and the review form | Andrew |
-| The ranking engine and the ranked feed | Osini, done |
-| `GET /users/:username`, its insights, and the `/profile/[username]` page | Aqeel, done |
-| Styled sign in and sign up pages on our own routes | Aaysha |
-| Deployment to Render and Vercel | Osini |
-| A SQL dump committed for long term revival | Osini |
+Updated 2026-08-13, in the order it blocks other people.
+
+| Missing | Owner | Blocks |
+| --- | --- | --- |
+| `POST /submissions` and the `/submissions/new` form. Full spec in `aaysha-submission-feature.md`. | **Aaysha, not started** | Everything. Nobody can post a request, so nothing can be reviewed and no Karma can be earned on anything we made in the demo. |
+| PR #4 fixed and merged: the broken anchor tags, the tests that never run, the lockfile churn, and renaming `ReviewCard` so it stops colliding with Aqeel's | **Andrew** | Every card in the feed links to a page that does not exist |
+| Styled sign in and sign up pages on our own routes | Osini, taken over from Aaysha | Nothing, cosmetic |
+| The first release of `develop` into `main` | Osini | Nothing built since Tuesday is on the public site |
+| A SQL dump committed for long term revival | Osini | Nothing |
+
+Done: the ranking engine and the ranked feed with search, filters and paging (Osini);
+profiles, insights and the review lists (Aqeel); Jest across both halves (Aqeel).
 
 **Nobody is blocked.** Every one of those can be started right now against what already exists.
 
