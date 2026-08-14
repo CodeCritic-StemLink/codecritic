@@ -9,7 +9,7 @@ import {
   createSubmissionSchema,
   createSubmissionErrorCodes,
 } from "../models/submission.schema";
-import { BadRequestError } from "../errors/appError";
+import { BadRequestError, NotFoundError } from "../errors/appError";
 import type { ErrorCode } from "../errors/appError";
 
 // Controllers unpack the request, validate it, call a service, send the response.
@@ -48,6 +48,24 @@ export const submissionController = {
     const result = await submissionService.getFeed(viewer, parsed.data);
 
     res.json(result);
+  },
+
+  /**
+   * GET /api/submissions/:id
+   *
+   * One request in full, with criteria, reviews and ratings. Optional auth: signed in
+   * users get the two viewer flags the review form uses to decide whether to show
+   * itself at all.
+   */
+  async getById(req: Request, res: Response) {
+    const viewer = await getOptionalUser(req);
+    const submission = await submissionService.getById(viewer, req.params.id);
+
+    if (!submission) {
+      throw new NotFoundError("No submission has that id.", "SUBMISSION_NOT_FOUND");
+    }
+
+    res.json(submission);
   },
 
   /**
