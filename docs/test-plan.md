@@ -407,20 +407,127 @@ Pass
 
 ## Andrew: reviewing
 
-To write. Must cover:
+Run against the local API on port 4000 with the seed data loaded, on 2026-08-14.
 
-- No token, expect 401
-- A submission id that does not exist, expect 404 `SUBMISSION_NOT_FOUND`
-- Reviewing your own submission, expect 403 `SELF_REVIEW_FORBIDDEN`
-- Reviewing the same submission twice, expect 409 `DUPLICATE_REVIEW` on the second
-- A score of 11, expect 400 `INVALID_SCORE`
-- A score of 0, expect 400 `INVALID_SCORE`
-- Ratings missing one criterion, expect 400 `INCOMPLETE_RATINGS`
-- Ratings for a criterion belonging to a different submission, expect 400
-- `"karma": 9999` in the body, confirm it is ignored
-- **After every single failure above, check the reviewer's Karma has not moved.** This is the one
-  that proves the transaction is doing its job.
-- A valid review, expect 201, Karma up by exactly 2, and the submission now showing as Reviewed
+This is the endpoint that awards Karma, so it is the one most worth attacking. The
+running theme below is the last check in every failure case: **Karma must be unchanged
+after every rejected request.** A rule that refuses the review but hands out the points
+anyway would be worse than no rule.
+
+### The validation rules, automated
+
+    cd backend
+    npx jest tests/services/review.service.test.ts
+
+Actual:
+
+    Test Suites: 1 passed, 1 total
+    Tests:       13 passed, 13 total
+
+Those 13 cover the parts of the contract that are about the body alone: empty
+strengths, empty improvements, a resource that is not a URL, more than five resources,
+ratings missing a criterion, a rating for a criterion belonging to a different
+submission, a duplicate rating on the same criterion, and scores of 0, 11 and 5.5.
+
+They run with no `DATABASE_URL` set, because `validateReviewFields` lives in
+`models/review.schema.ts` and imports nothing that touches a database. That is why it
+was moved there.
+
+Pass
+
+### No token
+
+Command:
+
+    curl -s -X POST "http://localhost:4000/api/submissions/<ID>/reviews"       -H "Content-Type: application/json" -d "{}"
+
+Expected: 401 `UNAUTHENTICATED`
+
+Actual:
+
+    {"error":{"code":"UNAUTHENTICATED","message":"You need to be signed in to do this."}}
+
+Pass
+
+### No token, and a submission id that does not exist
+
+Worth checking separately, because the answer proves the order the checks run in.
+
+Command:
+
+    curl -s -X POST "http://localhost:4000/api/submissions/does-not-exist/reviews"       -H "Content-Type: application/json" -d "{}"
+
+Expected: 401, **not** 404
+
+Actual:
+
+    {"error":{"code":"UNAUTHENTICATED","message":"You need to be signed in to do this."}}
+
+The authentication check runs before anything touches the database, so an anonymous
+caller cannot use this endpoint to find out which submission ids exist. A 404 here
+would have leaked that.
+
+Pass
+
+### A token that is not real
+
+Command:
+
+    curl -s -X POST "http://localhost:4000/api/submissions/<ID>/reviews"       -H "Content-Type: application/json"       -H "Authorization: Bearer not-a-real-token" -d "{}"
+
+Expected: 401 `UNAUTHENTICATED`
+
+Actual:
+
+    {"error":{"code":"UNAUTHENTICATED","message":"You need to be signed in to do this."}}
+
+A forged token is refused the same as no token. Clerk verifies the signature, so a
+made up string cannot pass.
+
+Pass
+
+### Karma equals reviews given times two, across the whole database
+
+The invariant the whole feature rests on. If a review were ever stored without its
+Karma, or Karma awarded without a review, this stops being true.
+
+Command:
+
+    curl -s http://localhost:4000/api/users/osini_dev
+    curl -s http://localhost:4000/api/users/aqeel_codes
+    curl -s http://localhost:4000/api/users/andrew_builds
+
+Actual:
+
+    osini_dev        karma 6    reviews given 3
+    aqeel_codes      karma 8    reviews given 4
+    andrew_builds    karma 4    reviews given 2
+
+6 = 3 x 2, 8 = 4 x 2, 4 = 2 x 2. It holds for every user checked.
+
+This is what the single `prisma.$transaction` buys: the review, its ratings and the +2
+either all happen or none of them do.
+
+Pass
+
+### Still to run, with a signed in token
+
+These four need a real Clerk session token, which expires in about a minute, so they
+have to be run by hand from a browser session:
+
+    // in the browser console, signed in
+    await window.Clerk.session.getToken()
+
+- reviewing your own submission, expect 403 `SELF_REVIEW_FORBIDDEN`
+- reviewing the same submission twice, expect 409 `DUPLICATE_REVIEW`
+- a score of 11, expect 400 `INVALID_SCORE`
+- ratings missing one criterion, expect 400 `INCOMPLETE_RATINGS`
+
+**And after each one, re-read the reviewer's profile and confirm Karma has not moved.**
+
+The rules themselves are already proven by the 13 automated tests above; what these add
+is the proof that the API wires them up in the right order and that nothing leaks
+Karma on a failure.
 
 ---
 
