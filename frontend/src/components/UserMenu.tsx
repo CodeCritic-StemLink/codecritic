@@ -1,50 +1,26 @@
-"use client";
+import { UserButton } from "@clerk/nextjs";
 
-import { UserButton, useClerk } from "@clerk/nextjs";
-import { LogOut } from "lucide-react";
-
-// The avatar menu, with one change to Clerk's default: signing out asks first.
+// The avatar menu: Clerk's own, sized to sit beside the navigation bar.
 //
-// Why bother. Writing a review is the longest piece of typing on this site, and the
-// avatar sits a few pixels from the theme toggle in the navigation bar. A misclick
-// there signs you out and the half written review is gone, because nothing is saved
-// until you press submit. One confirm is cheaper than losing that.
+// There was briefly a confirming Sign out here, so a misclick could not throw away a
+// half written review. It was removed, and the reason is worth recording so nobody
+// spends the afternoon rebuilding it.
 //
-// UserButton.MenuItems replaces Clerk's default menu rather than adding to it, so the
-// built in Sign out is gone and only ours remains. "manageAccount" is listed by name
-// to keep Clerk's own account screen, which is where somebody changes their password.
+// UserButton.MenuItems adds to Clerk's default menu rather than replacing it, so a
+// custom Sign out sat underneath Clerk's own and the menu offered the same action
+// twice. Hiding the default with the documented appearance key
+// (userButtonPopoverActionButton__signOut) did not match either, because Clerk's menu
+// is rendered by their script from their CDN and its internal names are not the ones
+// the appearance API exposes here.
 //
-// A client component because a confirm dialog and a click handler need the browser.
+// Two Sign out rows is a worse problem than no confirmation, so the default stands
+// alone. If the confirmation is ever wanted again, the honest way is our own menu
+// built on the useClerk() signOut function rather than fighting this component.
+//
+// A server component, unlike most Clerk pieces: it takes no props that need the
+// browser and renders inside the navigation bar, which is itself rendered on the
+// server.
 
 export function UserMenu() {
-  const { signOut } = useClerk();
-
-  return (
-    <UserButton
-      appearance={{ elements: { userButtonAvatarBox: "size-[30px]" } }}
-      userProfileMode="modal"
-    >
-      <UserButton.MenuItems>
-        {/* Clerk's own account screen: password, email, connected accounts. */}
-        <UserButton.Action label="manageAccount" />
-
-        <UserButton.Action
-          label="Sign out"
-          labelIcon={<LogOut className="size-4" />}
-          onClick={() => {
-            const leaving = window.confirm(
-              "Sign out of CodeCritic? Anything you have typed and not submitted will be lost."
-            );
-
-            if (leaving) {
-              // Back to the feed rather than the current page: half of the site is
-              // signed in only, and landing on a page you can no longer see would be
-              // a strange way to end.
-              void signOut({ redirectUrl: "/" });
-            }
-          }}
-        />
-      </UserButton.MenuItems>
-    </UserButton>
-  );
+  return <UserButton appearance={{ elements: { userButtonAvatarBox: "size-[30px]" } }} />;
 }

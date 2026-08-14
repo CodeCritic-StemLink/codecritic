@@ -98,5 +98,6 @@ export const clerkAppearance = {
     // Clerk's own footer badge. Kept, because hiding it is against their terms on the
     // free plan, but toned down so it does not compete with our own content.
     footer: "bg-transparent",
+
   },
 };
