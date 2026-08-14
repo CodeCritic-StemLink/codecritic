@@ -2,7 +2,7 @@ import { submissionRepository } from "../repositories/submission.repository";
 import type { SubmissionForFeed } from "../repositories/submission.repository";
 import { rankSubmissions } from "./ranking.service";
 import type { ScoreBreakdown } from "./ranking.service";
-import type { FeedQuery } from "../models/submission.schema";
+import type { FeedQuery, CreateSubmissionInput } from "../models/submission.schema";
 import type { User } from "../generated/prisma/client";
 
 // The rules about submissions. No req, no res, no prisma.
@@ -105,5 +105,23 @@ export const submissionService = {
       total,
       personalised: true,
     };
+  },
+
+  /**
+   * Posts a review request.
+   *
+   * The author is whichever User row the caller's own token resolved to. There is no
+   * parameter here for a different author id, so there is no way to call this on
+   * somebody else's behalf even by mistake — the same shape of guarantee PATCH /users/me
+   * gives by having no id in its route.
+   *
+   * Returns the same shape a feed row does: a fresh submission always has zero reviews,
+   * so it is always "pending" and never carries a score, same as any other unranked row
+   * would look before the viewer is known.
+   */
+  async createSubmission(author: User, input: CreateSubmissionInput): Promise<FeedItem> {
+    const row = await submissionRepository.create(author.id, input);
+
+    return toFeedItem(row);
   },
 };
