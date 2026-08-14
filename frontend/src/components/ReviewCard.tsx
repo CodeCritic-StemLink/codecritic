@@ -55,13 +55,14 @@ export function ReviewCard({ review }: Props) {
         <div className="mt-3 flex flex-col gap-1">
           {review.resources.map((url) => 
           (
-            <a>
-                key={url}
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                className="truncate text-[12.5px] text-primary underline-offset-4 hover:underline"
-                {url}
+            <a
+            key={url}
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="truncate text-[12.5px] text-primary underline-offset-4 hover:underline"
+            >
+            {url}
             </a>
           ))}
         </div>

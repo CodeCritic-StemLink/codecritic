@@ -36,7 +36,7 @@ export default async function SubmissionDetailPage({ params }: PageProps<"/submi
     Boolean(token) && !submission.viewer.isAuthor && !submission.viewer.hasReviewed;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:max-w-3xl sm:px-6 lg:max-w-4xl">
       <Link href="/" className="text-[13px] text-muted-foreground hover:text-foreground">
         ← Back to the feed
       </Link>
@@ -63,11 +63,15 @@ export default async function SubmissionDetailPage({ params }: PageProps<"/submi
         {submission.description}
       </p>
 
-      <a>
+
+        <a
         href={submission.repoUrl}
         target="_blank"
         rel="noreferrer"
         className="mt-3 inline-block text-[13.5px] text-primary underline-offset-4 hover:underline"
+        
+        >
+
         {submission.repoUrl}
       </a>
 

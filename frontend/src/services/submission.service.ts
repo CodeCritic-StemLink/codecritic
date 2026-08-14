@@ -47,7 +47,6 @@ export type FeedFilters = {
   status?: "pending" | "reviewed";
   page?: number;
 };
-// --- add below the existing FeedFilters / getFeed code ---
 
 /** One score on the detail page: the criterion's own label, so the front end never
  * has to join it back against a separate criteria list. */

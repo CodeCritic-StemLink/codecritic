@@ -2,12 +2,12 @@
 // it is the one most worth attacking — see docs/test-plan.md, Andrew's section.
 //
 // This file needs no database and no server, because validateReviewFields is pure.
-// See the comment at the top of review.service.ts for why.
+// See the comment at the top of models/review.schema.ts for why.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { validateReviewFields } from "../../src/services/review.service";
+import { validateReviewFields } from "../../src/models/review.schema";
 import { BadRequestError } from "../../src/errors/appError";
 
 const CRITERIA = [{ id: "c1" }, { id: "c2" }];

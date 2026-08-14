@@ -84,7 +84,7 @@ export function ReviewForm({ submissionId, criteria }: Props) {
   const canSubmit = strengths.trim().length > 0 && improvements.trim().length > 0 && !submitting;
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 rounded-[var(--radius)] border bg-card p-5">
+    <form onSubmit={handleSubmit} className="mt-4 w-full rounded-[var(--radius)] border bg-card p-4 sm:p-5">
       <div className="mb-4">
         <label htmlFor="strengths" className="mb-1.5 block text-[12.5px] font-semibold">
           What was done well
@@ -132,7 +132,10 @@ export function ReviewForm({ submissionId, criteria }: Props) {
 
       <div className="mb-5 flex flex-col gap-3">
         {criteria.map((criterion) => (
-          <div key={criterion.id} className="flex items-center justify-between gap-3">
+          <div
+            key={criterion.id}
+            className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+          >
             <span className="text-[13px]">{criterion.label}</span>
             <div className="flex items-center gap-2">
               <input
@@ -141,9 +144,9 @@ export function ReviewForm({ submissionId, criteria }: Props) {
                 max={10}
                 value={scores[criterion.id]}
                 onChange={(e) => setScore(criterion.id, Number(e.target.value))}
-                className="w-32 accent-primary"
+                className="w-full accent-primary sm:w-32"
               />
-              <span className="w-10 text-right font-mono text-[12.5px] text-primary">
+              <span className="w-10 shrink-0 text-right font-mono text-[12.5px] text-primary">
                 {scores[criterion.id]}/10
               </span>
             </div>
