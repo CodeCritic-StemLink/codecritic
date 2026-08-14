@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { UserLink } from "@/components/UserLink";
 import { timeAgo } from "@/lib/utils";
 import type { ReviewGivenItem, ReviewReceivedItem } from "@/services/user.service";
 
@@ -32,8 +33,15 @@ export function ReviewCard({ review, showReviewer = false }: Props) {
           {review.submission.title}
         </Link>
 
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {showReviewer && hasReviewer(review) ? `@${review.reviewer.username} · ` : ""}
+        {/* The reviewer's name was plain text, which made the one person on this card
+            you might want to look up the one name you could not click. */}
+        <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+          {showReviewer && hasReviewer(review) ? (
+            <>
+              <UserLink username={review.reviewer.username} className="font-normal" />
+              <span aria-hidden>·</span>
+            </>
+          ) : null}
           {timeAgo(review.createdAt)}
         </span>
       </div>
