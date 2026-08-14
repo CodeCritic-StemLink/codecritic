@@ -72,7 +72,7 @@ export const submissionController = {
    * POST /api/submissions
    *
    * requireUser throws 401 with no token, and 404 USER_NOT_FOUND if the caller is known
-   * to Clerk but has never called POST /users/sync — either way, execution stops before
+   * to Clerk but has never called POST /users/sync. Either way execution stops before
    * validation runs, so an anonymous caller cannot even discover what the field rules are.
    */
   async create(req: Request, res: Response) {

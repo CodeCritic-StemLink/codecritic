@@ -7,12 +7,15 @@
 
 import {
   matchingTags,
+  hasTag,
+  normaliseTag,
   recencyPoints,
   scoreSubmission,
   rankSubmissions,
   POINTS_PER_MATCHING_TAG,
   MAX_RECENCY_POINTS,
   NEEDS_HELP_POINTS,
+  ALREADY_REVIEWED_PENALTY,
 } from "../../src/services/ranking.service";
 
 // A fixed "now" so the tests give the same answer today and next month.
@@ -42,6 +45,36 @@ test("a repeated tag is only counted once", () => {
 
 test("nothing matches for a viewer with an empty stack", () => {
   expect(matchingTags(["React", "Node"], [])).toEqual([]);
+});
+
+test("spaces around a tag do not stop it matching", () => {
+  expect(matchingTags([" React "], ["React"])).toEqual([" React "]);
+});
+
+// --------------------------------------------------------------------------
+// hasTag, which is what the feed's tag filter uses
+//
+// It shares normaliseTag with the matching above on purpose. If the filter and the
+// ranking compared tags differently, clicking "Node" in the sidebar could hide a post
+// that the ranking had just decided was a perfect match for you.
+// --------------------------------------------------------------------------
+
+test("the tag filter finds a tag written in a different case", () => {
+  expect(hasTag(["node", "Express"], "Node")).toBe(true);
+  expect(hasTag(["Node"], "node")).toBe(true);
+});
+
+test("the tag filter does not match a different technology", () => {
+  expect(hasTag(["Node"], "Nodemon")).toBe(false);
+});
+
+test("the tag filter says no for a submission with no tags", () => {
+  expect(hasTag([], "Node")).toBe(false);
+});
+
+test("the filter and the ranking normalise a tag the same way", () => {
+  expect(normaliseTag(" Node ")).toBe("node");
+  expect(normaliseTag("NODE")).toBe(normaliseTag("node"));
 });
 
 // --------------------------------------------------------------------------
@@ -77,7 +110,7 @@ test("a future date is treated as brand new, not scored above the maximum", () =
 // scoreSubmission
 // --------------------------------------------------------------------------
 
-test("the three parts add up to the total", () => {
+test("every part adds up to the total", () => {
   const score = scoreSubmission(
     { tags: ["React", "Next.js"], createdAt: hoursBefore(2), reviewCount: 0 },
     ["React", "Next.js", "Tailwind"],
@@ -86,7 +119,9 @@ test("the three parts add up to the total", () => {
 
   expect(score.tagPoints).toBe(2 * POINTS_PER_MATCHING_TAG);
   expect(score.needsHelpPoints).toBe(NEEDS_HELP_POINTS);
-  expect(score.total).toBe(score.tagPoints + score.recencyPoints + score.needsHelpPoints);
+  expect(score.total).toBe(
+    score.tagPoints + score.recencyPoints + score.needsHelpPoints + score.alreadyReviewedPoints
+  );
 });
 
 test("a reviewed submission gets no needs-help bonus", () => {
@@ -145,6 +180,88 @@ test("the needs-help bonus never outranks a genuine extra tag match", () => {
   );
 
   expect(twoTagsReviewed.total > oneTagNoReviews.total).toBe(true);
+});
+
+// --------------------------------------------------------------------------
+// The already-reviewed penalty
+//
+// One review per person per submission is a rule the API enforces, so a submission you
+// have answered is one you can do nothing more with. It drops rather than disappears,
+// because the SRS asks for the same submissions reordered, not filtered.
+// --------------------------------------------------------------------------
+
+test("a submission you have already reviewed loses points", () => {
+  const notYetReviewed = scoreSubmission(
+    { tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2 },
+    ["React"],
+    NOW
+  );
+
+  const alreadyReviewedByMe = scoreSubmission(
+    { tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2, reviewedByViewer: true },
+    ["React"],
+    NOW
+  );
+
+  expect(alreadyReviewedByMe.alreadyReviewedPoints).toBe(-ALREADY_REVIEWED_PENALTY);
+  expect(alreadyReviewedByMe.total).toBe(notYetReviewed.total - ALREADY_REVIEWED_PENALTY);
+});
+
+test("a submission you have not reviewed is not penalised", () => {
+  const score = scoreSubmission(
+    { tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2, reviewedByViewer: false },
+    ["React"],
+    NOW
+  );
+
+  expect(score.alreadyReviewedPoints).toBe(0);
+});
+
+// The point of the penalty. Two posts you can equally help with, one already answered
+// by you: the one you can still act on comes first.
+test("between two identical posts, the one you have not reviewed comes first", () => {
+  const order = rankSubmissions(
+    [
+      { id: "mine", tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2, reviewedByViewer: true },
+      { id: "open", tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2 },
+    ],
+    ["React"],
+    NOW
+  ).map((s) => s.id);
+
+  expect(order).toEqual(["open", "mine"]);
+});
+
+// The penalty must not become a hiding mechanism dressed up as a score. A post you have
+// reviewed that matches your stack still beats one that matches nothing at all.
+test("the penalty is smaller than a matching tag, so relevance still wins", () => {
+  const reviewedButRelevant = scoreSubmission(
+    { tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2, reviewedByViewer: true },
+    ["React"],
+    NOW
+  );
+
+  const irrelevant = scoreSubmission(
+    { tags: ["Rust"], createdAt: hoursBefore(10), reviewCount: 2 },
+    ["React"],
+    NOW
+  );
+
+  expect(ALREADY_REVIEWED_PENALTY < POINTS_PER_MATCHING_TAG).toBe(true);
+  expect(reviewedButRelevant.total > irrelevant.total).toBe(true);
+});
+
+test("nothing is dropped, so a post you reviewed is still in the feed", () => {
+  const ranked = rankSubmissions(
+    [
+      { id: "mine", tags: ["React"], createdAt: hoursBefore(10), reviewCount: 2, reviewedByViewer: true },
+      { id: "open", tags: ["Rust"], createdAt: hoursBefore(10), reviewCount: 2 },
+    ],
+    ["React"],
+    NOW
+  );
+
+  expect(ranked.map((s) => s.id).sort()).toEqual(["mine", "open"]);
 });
 
 // --------------------------------------------------------------------------

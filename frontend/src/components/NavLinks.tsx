@@ -2,11 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Layers, UserRound } from "lucide-react";
 
-// The middle set of nav links.
+// The navigation links: Browse, and My profile once we know who somebody is.
 //
 // A client component because knowing which link is "active" needs the current path,
 // which is not available to the server component that renders the rest of the navbar.
+//
+// Two things were wrong with the old version, and both came from where it sat rather
+// than from the links themselves.
+//
+// It was hidden below sm, so on a phone there was no way to reach your own profile at
+// all except through the account menu. Half the navigation vanished on the screen size
+// most people would open the site on.
+//
+// And on a wide screen it floated in the dead centre of the bar, a long way from
+// anything, because the bar used justify-between on three children: brand, links,
+// actions. Nothing was wrong with the links; they were being pushed there by the
+// layout. They now sit beside the brand, and Nav.tsx wraps them onto their own row on
+// a phone rather than hiding them.
+//
+// The chips match the feed's filter chips on purpose. Same shape, same active
+// treatment, so the two kinds of "where am I" control on the site look related instead
+// of like two people built them.
 
 type Props = {
   /**
@@ -21,35 +39,45 @@ type Props = {
    * is a single "My profile" link until those pages exist.
    */
   username?: string;
+  /** Positioning, decided by Nav.tsx rather than in here. */
+  className?: string;
 };
 
-export function NavLinks({ username }: Props) {
+export function NavLinks({ username, className = "" }: Props) {
   const pathname = usePathname();
 
   const links = [
-    { label: "Browse", href: "/" },
-    ...(username ? [{ label: "My profile", href: `/profile/${username}` }] : []),
+    { label: "Browse", href: "/", Icon: Layers },
+    ...(username
+      ? [{ label: "My profile", href: `/profile/${username}`, Icon: UserRound }]
+      : []),
   ];
 
   return (
-    <nav className="hidden items-center gap-5 text-[13.5px] text-muted-foreground sm:flex">
-      {links.map((link) => {
-        const active = link.href === "/" ? pathname === "/" : pathname === link.href;
+    <nav aria-label="Main" className={className}>
+      <ul className="flex items-center gap-1">
+        {links.map(({ label, href, Icon }) => {
+          const active = href === "/" ? pathname === "/" : pathname === href;
 
-        return (
-          <Link
-            key={link.label}
-            href={link.href}
-            className={
-              active
-                ? "border-b-2 border-primary pb-0.5 font-medium text-foreground"
-                : "border-b-2 border-transparent pb-0.5 transition-colors hover:text-foreground"
-            }
-          >
-            {link.label}
-          </Link>
-        );
-      })}
+          return (
+            <li key={label}>
+              <Link
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={[
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13.5px] transition-colors",
+                  active
+                    ? "bg-accent font-medium text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                ].join(" ")}
+              >
+                <Icon className="size-4 shrink-0" aria-hidden />
+                {label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }

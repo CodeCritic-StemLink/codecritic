@@ -108,10 +108,22 @@ State as of 2026-08-12. Everything here is built, tested and on `main`.
 file that lives in the repo so anyone can rebuild the identical database.
 
 **Demo data.** `backend/prisma/seed.ts`, run with `npm run seed`. Five users with deliberately
-different tech stacks, ten submissions with overlapping tags and ages from two hours to eight
-days, and fourteen reviews with a rating for every criterion. Four submissions have no reviews on
-purpose, so the Feature 01 needs-help boost has something to lift. Karma is counted from the
+different tech stacks, **twenty five submissions** with overlapping tags and ages from two hours
+to two weeks, and nineteen reviews with a rating for every criterion. Karma is counted from the
 reviews rather than typed in.
+
+Three things about the data are deliberate and worth knowing:
+
+- **Several submissions have no reviews**, so the Feature 01 needs-help boost has something to
+  lift.
+- **There are more than twenty submissions**, which is the page size, so the pager is reachable
+  on the real feed. With ten it had nothing to do and could not be demonstrated or checked.
+- **A few are tagged in lower case**, because the post form lets people type any tag and both
+  spellings genuinely occur. The tag filter and the sidebar counts treat "Node" and "node" as one
+  technology, and the seed data is what proves it rather than a claim in a document.
+
+`npm run seed` **deletes every row first**, including any account created through the real sign up
+form, so it is a development and pre-demo command rather than something to run casually.
 
 **Back end.** Express with TypeScript on port 4000, with:
 
@@ -133,9 +145,9 @@ reviews rather than typed in.
 | `PATCH /api/users/me` | Done. Edits your own profile only. |
 | `GET /api/users/:username` | Done. Public profile with insights and the two review lists. Feature 02. |
 | `GET /api/users/me` | Done. Your own row, for the navigation bar. |
-| `GET /api/submissions/:id` | Written, in review on PR #4. |
-| `POST /api/submissions/:id/reviews` | Written, in review on PR #4. |
-| `POST /api/submissions` | **Not started.** The last missing endpoint. See `aaysha-submission-feature.md`. |
+| `GET /api/submissions/:id` | Done. One request in full, with criteria, reviews and ratings. |
+| `POST /api/submissions/:id/reviews` | Done. Writes the review, its ratings and +2 Karma in one transaction. |
+| `POST /api/submissions` | Done. All five validation rules server side. |
 
 **Front end.** Next.js 16 with TypeScript, Tailwind 4, Shadcn/UI and Zustand, on port 3000. Clerk
 is wired in through `ClerkProvider` and `src/proxy.ts`, and the header has working sign in, sign
@@ -145,18 +157,32 @@ up and account menu.
 
 ### What does not exist yet
 
-Updated 2026-08-13, in the order it blocks other people.
+Updated 2026-08-14, after the first release to production.
 
-| Missing | Owner | Blocks |
+**Everything in the SRS is built, merged and live.** All six endpoints, all seven pages,
+and both features. `main` and `develop` are level, and the deployed site runs the same
+commit.
+
+| Was missing | Now |
+| --- | --- |
+| `POST /submissions` and the post form | Done, Aaysha, PR #8 |
+| `GET /submissions/:id`, `POST /submissions/:id/reviews`, the detail page and review form | Done, Andrew, PR #4 |
+| `GET /users/:username`, insights and the profile page | Done, Aqeel, PR #3 and #6 |
+| The ranked feed, search, filters and paging | Done, Osini, PR #5 and #7 |
+| Our own sign in and sign up pages | Done, Osini, PR #10 |
+| The first release of `develop` into `main` | Done, PR #11 |
+
+Left over, and none of it blocks anything:
+
+| Item | Owner | Note |
 | --- | --- | --- |
-| `POST /submissions` and the `/submissions/new` form. Full spec in `aaysha-submission-feature.md`. | **Aaysha, not started** | Everything. Nobody can post a request, so nothing can be reviewed and no Karma can be earned on anything we made in the demo. |
-| PR #4 fixed and merged: the broken anchor tags, the tests that never run, the lockfile churn, and renaming `ReviewCard` so it stops colliding with Aqeel's | **Andrew** | Every card in the feed links to a page that does not exist |
-| Styled sign in and sign up pages on our own routes | Osini, taken over from Aaysha | Nothing, cosmetic |
-| The first release of `develop` into `main` | Osini | Nothing built since Tuesday is on the public site |
-| A SQL dump committed for long term revival | Osini | Nothing |
+| A Postman collection | anyone, optional | `docs/test-plan.md` already carries every command with real output |
+| A CI pipeline | anyone, optional | Nothing in the SRS asks for it, and there are few pull requests left to protect |
+| Individual walkthrough practice | **everyone** | The largest remaining risk, and the only one that is not code |
 
-Done: the ranking engine and the ranked feed with search, filters and paging (Osini);
-profiles, insights and the review lists (Aqeel); Jest across both halves (Aqeel).
+The SQL dump that used to be listed here was dropped on purpose. Osini decided against
+it: the database is hosted on Neon and the seed script rebuilds the demo data from
+nothing, so a dump would be a third copy of the same thing.
 
 **Nobody is blocked.** Every one of those can be started right now against what already exists.
 
@@ -909,12 +935,31 @@ Practice answering these out loud. If you cannot, go and read that part of the c
 
 **About Feature 01, the flagship**
 
+Full answers to all of these are in [feature-01-ranking.md](feature-01-ranking.md).
+
 - The formula, and what each part contributes
-- Why tag matching is weighted highest
+- **How age becomes points.** It is not a clock or a cut off: a new post gets 10 and every 48
+  hours whatever is left is halved
+- Why tag matching is weighted highest, and what breaks if it is worth 5 instead of 12
 - Why a post with no reviews gets a boost, and what problem that solves
+- Why a post you have already reviewed loses points instead of being hidden
+- **Why it sorts rather than filters.** Every submission is in every feed. Saying "we filter by
+  tech stack" describes a design the SRS did not ask for
+- Why the whole set is ranked before the page is cut out of it
 - Why it runs on the server and not in the browser
 - What happens to a post that matches every tag but is a year old
-- What alternatives we considered and why we rejected them
+- What alternatives we considered and why we rejected them, including one the SRS itself suggested
+
+**About Feature 02, the profiles**
+
+Full answers are in [feature-02-profiles.md](feature-02-profiles.md).
+
+- The difference between reviews given and reviews received, and why getting them the same way
+  round is the trap the SRS warns about
+- Why Karma always equals reviews given times two, and what it would mean if it did not
+- Where "technologies you review in" comes from, and why it is not your own tech stack
+- Why the average score is null rather than zero for somebody who has never rated
+- Why you can edit your own profile but nobody can edit yours
 
 **About the architecture**
 

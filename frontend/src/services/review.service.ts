@@ -24,7 +24,7 @@ export type CreateReviewResult = {
 };
 
 /**
- * Writes a review on somebody else's submission. Auth required — the API rejects
+ * Writes a review on somebody else's submission. Auth required: the API rejects
  * self reviews and duplicate reviews, and awards exactly +2 Karma on success.
  */
 export function createReview(

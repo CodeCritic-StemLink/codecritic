@@ -18,7 +18,7 @@ export const reviewRepository = {
    *
    * This is the "clear error message" half of the duplicate check. The real guarantee
    * is the unique constraint on (submissionId, reviewerId) in the database, which is
-   * what stops two requests arriving at the same instant from both succeeding — a check
+   * what stops two requests arriving at the same instant from both succeeding. A check
    * like this one has a gap that only the database can close.
    */
   async existsForReviewer(submissionId: string, reviewerId: string): Promise<boolean> {
@@ -27,7 +27,27 @@ export const reviewRepository = {
   },
 
   /**
-   * Creates the review, one rating per criterion, and adds 2 Karma to the reviewer —
+   * Every submission this person has already reviewed, as a set of ids.
+   *
+   * The feed uses it to push those submissions down: one review per person per
+   * submission is a rule, so a submission you have answered is one you can do nothing
+   * more with.
+   *
+   * One small query for the whole page rather than an extra include on every feed row.
+   * It only ever returns as many ids as this person has written reviews, which is a
+   * number in the tens, not a number that grows with the feed.
+   */
+  async submissionIdsReviewedBy(reviewerId: string): Promise<Set<string>> {
+    const rows = await prisma.review.findMany({
+      where: { reviewerId },
+      select: { submissionId: true },
+    });
+
+    return new Set(rows.map((row) => row.submissionId));
+  },
+
+  /**
+   * Creates the review, one rating per criterion, and adds 2 Karma to the reviewer,
    * all inside one transaction. Either all three happen or none of them do. This is
    * what makes the Karma total trustworthy: there is no path that produces Karma
    * without a stored review, and no path that stores a review without the Karma.

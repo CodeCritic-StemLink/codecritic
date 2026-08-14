@@ -1,42 +1,114 @@
-import { Search } from "lucide-react";
+"use client";
 
-// The search box.
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2, Search, X } from "lucide-react";
+
+import { feedUrl } from "@/lib/feedUrl";
+import type { FeedParams } from "@/lib/feedUrl";
+
+// The search box, searching as you type.
 //
-// A plain HTML form with method="get", not a React component with state. Submitting
-// it puts ?search=... in the address bar, the server re-renders the page with that
-// filter, and the result is a real URL somebody can bookmark or send to a teammate.
-// No client JavaScript is involved at all, which is why this stays a server component.
+// It used to be a plain form you had to submit, which meant nothing happened until you
+// pressed Enter and most people did not know they had to.
 //
-// The hidden inputs carry the other filters through, so searching does not silently
-// throw away the status filter or the "Why this order?" view.
+// It is now a client component, and it is the only one on this page. Everything else,
+// including the ranking and the results, still runs on the server. What this holds is
+// the text in the box and a timer, nothing more.
+//
+// The results still come from the URL. Typing rewrites the address and the server
+// re-renders the feed for it, so a search is still a real link you can bookmark or send
+// to somebody, and the back button still works. The alternative, fetching results into
+// client state, would have meant a second copy of the ranking logic in the browser and
+// no shareable address.
+//
+// router.replace rather than push, so twelve keystrokes do not become twelve entries in
+// your history that you have to press back through one at a time.
+
+/** How long to wait after the last keystroke before searching. */
+const DEBOUNCE_MS = 300;
 
 type Props = {
-  defaultValue?: string;
-  status?: string;
-  tag?: string;
-  why?: string;
+  params: FeedParams;
 };
 
-export function FeedSearch({ defaultValue, status, tag, why }: Props) {
-  return (
-    <form action="/" method="get" className="relative">
-      {status ? <input type="hidden" name="status" value={status} /> : null}
-      {tag ? <input type="hidden" name="tag" value={tag} /> : null}
-      {why ? <input type="hidden" name="why" value={why} /> : null}
+export function FeedSearch({ params }: Props) {
+  const router = useRouter();
 
+  // What the address bar currently holds. The results on screen were rendered for this.
+  const applied = params.search ?? "";
+
+  const [value, setValue] = useState(applied);
+  const [lastApplied, setLastApplied] = useState(applied);
+
+  /*
+   * The address bar is the source of truth, not this input.
+   *
+   * Without this, pressing back after a search leaves the URL on the old query while the
+   * box still shows the new text, and the two disagree until you type again.
+   *
+   * Adjusted during render rather than in an effect, which is React's own advice for
+   * resetting state when a prop changes. An effect would render once with the stale
+   * text, then again with the right text, and eslint refuses it for exactly that reason.
+   */
+  if (applied !== lastApplied) {
+    setLastApplied(applied);
+    setValue(applied);
+  }
+
+  // True while the box holds something the server has not answered for yet.
+  const searching = value.trim() !== applied;
+
+  useEffect(() => {
+    const trimmed = value.trim();
+
+    // Also what stops the first render rewriting the address for no reason: on arrival
+    // the box holds exactly what the URL holds, so there is nothing to do.
+    if (trimmed === applied) return;
+
+    const timer = setTimeout(() => {
+      // null rather than "" for an empty box: feedUrl drops null keys, so clearing the
+      // search removes ?search= from the address instead of leaving ?search= behind.
+      router.replace(feedUrl(params, { search: trimmed || null }), { scroll: false });
+    }, DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+    // params is rebuilt on every render, so depending on it would restart the timer
+    // forever. The value being typed and the value already applied are what matter.
+  }, [value, applied]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="relative">
       <Search
         className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden
       />
 
       <input
-        type="search"
-        name="search"
-        defaultValue={defaultValue}
+        type="text"
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
         placeholder="Search review requests"
         aria-label="Search review requests"
-        className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-3 text-[13.5px] outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+        className="w-full rounded-lg border border-input bg-card py-2 pl-9 pr-10 text-[13.5px] outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
       />
-    </form>
+
+      {/* One slot on the right: a spinner while the server catches up, a clear button
+          once it has, and nothing at all when the box is empty. */}
+      <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center">
+        {searching ? (
+          <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
+        ) : value ? (
+          <button
+            type="button"
+            onClick={() => setValue("")}
+            aria-label="Clear the search"
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <X className="size-4" aria-hidden />
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }

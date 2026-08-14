@@ -17,7 +17,7 @@ import { ApiError } from "@/api/api";
 //
 // Split into steps rather than one long scrolling page, so each step fits on a phone
 // screen without scrolling: basics, tags, criteria, then a review step before posting.
-// Every rule shown here is a courtesy — the real validation is server side in
+// Every rule shown here is a courtesy: the real validation is server side in
 // POST /submissions, and a mentor calling the API directly with none of this will hit
 // the same errors.
 

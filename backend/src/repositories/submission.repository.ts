@@ -49,9 +49,17 @@ const detailInclude = {
 
 export type SubmissionWithReviews = Prisma.SubmissionGetPayload<{ include: typeof detailInclude }>;
 
+/**
+ * The filters the database can apply.
+ *
+ * Note there is no tag here. Filtering by tag has to ignore case, because tags are
+ * typed by hand and "Node" and "node" are the same technology to everybody except a
+ * string comparison. Postgres array containment is exact and case sensitive, so that
+ * filter is applied in the service instead, through the same comparison the ranking
+ * uses. See submission.service.ts.
+ */
 export type FeedFilters = {
   search?: string;
-  tag?: string;
   status?: "pending" | "reviewed";
 };
 
@@ -65,11 +73,6 @@ function buildWhere(filters: FeedFilters): Prisma.SubmissionWhereInput {
       { title: { contains: filters.search, mode: "insensitive" } },
       { description: { contains: filters.search, mode: "insensitive" } },
     ];
-  }
-
-  if (filters.tag) {
-    // has checks whether the tags array contains this exact value.
-    where.tags = { has: filters.tag };
   }
 
   if (filters.status === "pending") {

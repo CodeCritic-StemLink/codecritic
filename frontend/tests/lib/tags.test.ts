@@ -6,7 +6,7 @@
 // It lives in lib/ rather than inside FeedFilters.tsx precisely so it can be tested
 // like this, with no React and no browser.
 
-import { popularTags } from "@/lib/tags";
+import { popularTags, normaliseTag, sameTag } from "@/lib/tags";
 import type { FeedItem } from "@/services/submission.service";
 
 /**
@@ -89,15 +89,78 @@ test("a submission with no tags is skipped without breaking the count", () => {
   expect(tags).toEqual([{ tag: "Node", count: 1 }]);
 });
 
-test("tag matching is exact, so Node and node are counted as two technologies", () => {
-  // Worth pinning down: the ranking engine matches tags case insensitively, but this
-  // is a display list, and showing "Node 2" when the data holds two different strings
-  // would be a quiet lie about what is in the database.
-  const tags = popularTags([submission(["Node"]), submission(["node"])], 8);
-
-  expect(tags).toHaveLength(2);
-});
-
 test("a limit of zero returns nothing rather than everything", () => {
   expect(popularTags([submission(["Node"])], 0)).toEqual([]);
+});
+
+// --------------------------------------------------------------------------
+// Spelling
+//
+// Tags are typed by hand on the post form, so the same technology arrives written
+// several ways. The rail showed "Node 3" and "node 1" as two separate technologies,
+// which is nonsense to a reader and does not match how the ranking compares tags.
+// --------------------------------------------------------------------------
+
+test("Node and node are one technology, not two", () => {
+  const tags = popularTags([submission(["Node"]), submission(["node"])], 8);
+
+  expect(tags).toEqual([{ tag: "Node", count: 2 }]);
+});
+
+test("the spelling shown is whichever one was used most", () => {
+  const tags = popularTags(
+    [submission(["node"]), submission(["node"]), submission(["Node"])],
+    8
+  );
+
+  expect(tags[0].tag).toBe("node");
+  expect(tags[0].count).toBe(3);
+});
+
+test("spellings used equally often fall back to alphabetical, so the label never flickers", () => {
+  const tags = popularTags([submission(["node"]), submission(["Node"])], 8);
+
+  // "Node" sorts before "node", so the label is stable whichever order they arrive in.
+  expect(tags[0].tag).toBe("Node");
+  expect(popularTags([submission(["Node"]), submission(["node"])], 8)).toEqual(tags);
+});
+
+test("stray spaces around a tag do not create a second technology", () => {
+  const tags = popularTags([submission([" React "]), submission(["React"])], 8);
+
+  expect(tags).toEqual([{ tag: "React", count: 2 }]);
+});
+
+test("a tag that is only spaces is not a technology", () => {
+  expect(popularTags([submission(["   "]), submission(["Node"])], 8)).toEqual([
+    { tag: "Node", count: 1 },
+  ]);
+});
+
+test("grouping happens before the limit, so a split spelling cannot lose its place", () => {
+  const tags = popularTags(
+    [submission(["Node"]), submission(["node"]), submission(["Rust"]), submission(["Go"])],
+    1
+  );
+
+  expect(tags).toEqual([{ tag: "Node", count: 2 }]);
+});
+
+// --------------------------------------------------------------------------
+// normaliseTag and sameTag
+// --------------------------------------------------------------------------
+
+test("normalising trims and lowercases, matching the back end", () => {
+  expect(normaliseTag(" Node ")).toBe("node");
+  expect(normaliseTag("NODE")).toBe(normaliseTag("node"));
+});
+
+test("sameTag ignores case, so ?tag=node still lights up the Node filter", () => {
+  expect(sameTag("Node", "node")).toBe(true);
+  expect(sameTag("Node", "Nodemon")).toBe(false);
+});
+
+test("sameTag says no when either side is missing, so nothing is selected by default", () => {
+  expect(sameTag(undefined, "Node")).toBe(false);
+  expect(sameTag("Node", undefined)).toBe(false);
 });

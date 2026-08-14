@@ -1,5 +1,5 @@
 // Tests for the review validation rules. This is the endpoint that awards Karma, so
-// it is the one most worth attacking — see docs/test-plan.md, Andrew's section.
+// it is the one most worth attacking. See docs/test-plan.md, Andrew's section.
 //
 // Run with:  npm test    (from backend)
 //

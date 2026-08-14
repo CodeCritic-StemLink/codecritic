@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HandHelping, Inbox, Sparkles } from "lucide-react";
 
+import { UserLink } from "@/components/UserLink";
 import { timeAgo } from "@/lib/utils";
 import type { FeedItem } from "@/services/submission.service";
 
@@ -62,16 +63,30 @@ export function FeedSidebar({ submissions, total, personalised, signedIn }: Prop
             <dd className="font-mono text-[15px] font-semibold tabular-nums">{total}</dd>
           </div>
 
+          {/*
+            "on this page" is not padding, it is the truth. Requests is the total across
+            every page, but this count can only see the submissions this page was given,
+            so on a feed longer than one page the two are counting different things.
+            Saying so is cheaper and more honest than a second request for a figure
+            nobody asked us to show, and the link goes to the real answer.
+          */}
           <div className="flex items-baseline justify-between gap-2">
             <dt className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
               <HandHelping className="size-3.5" aria-hidden />
-              Still unanswered
+              Unanswered on this page
             </dt>
             <dd className="font-mono text-[15px] font-semibold tabular-nums text-primary">
               {pendingCount}
             </dd>
           </div>
         </dl>
+
+        <Link
+          href="/?status=pending"
+          className="mt-3 block text-[12px] text-primary transition-opacity hover:underline"
+        >
+          Show every unanswered request
+        </Link>
 
         {personalised ? (
           <p className="mt-3 border-t pt-3 text-[12px] leading-relaxed text-muted-foreground">
@@ -91,18 +106,33 @@ export function FeedSidebar({ submissions, total, personalised, signedIn }: Prop
 
           <ul className="flex flex-col gap-2.5">
             {needsHelp.slice(0, MAX_NEEDS_HELP).map((submission) => (
-              <li key={submission.id}>
-                <Link
-                  href={`/submissions/${submission.id}`}
-                  className="block rounded-md border-l-2 border-l-primary bg-muted/50 px-2.5 py-2 transition-colors hover:bg-muted"
-                >
-                  <p className="line-clamp-2 text-[12.5px] font-medium leading-snug">
+              /*
+                Not one big link, for the same reason SubmissionCard is not: a link
+                cannot contain another link, and the browser quietly ignores the inner
+                one, which is what made the username here unclickable. The title
+                stretches an invisible overlay across the row instead, and the username
+                is lifted above it.
+              */
+              <li
+                key={submission.id}
+                className="relative rounded-md border-l-2 border-l-primary bg-muted/50 px-2.5 py-2 transition-colors hover:bg-muted"
+              >
+                <p className="line-clamp-2 text-[12.5px] font-medium leading-snug">
+                  <Link
+                    href={`/submissions/${submission.id}`}
+                    className="after:absolute after:inset-0 after:content-[''] hover:text-primary"
+                  >
                     {submission.title}
-                  </p>
-                  <p className="mt-1 font-mono text-[11px] text-muted-foreground">
-                    @{submission.author.username} · {timeAgo(submission.createdAt)}
-                  </p>
-                </Link>
+                  </Link>
+                </p>
+                <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+                  <UserLink
+                    username={submission.author.username}
+                    overlay
+                    className="font-normal"
+                  />{" "}
+                  · {timeAgo(submission.createdAt)}
+                </p>
               </li>
             ))}
           </ul>

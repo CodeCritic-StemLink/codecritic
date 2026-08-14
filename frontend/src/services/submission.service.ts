@@ -10,6 +10,8 @@ export type ScoreBreakdown = {
   matchedTags: string[];
   recencyPoints: number;
   needsHelpPoints: number;
+  /** Zero, or a negative number when the viewer has already reviewed this one. */
+  alreadyReviewedPoints: number;
 };
 
 export type Criterion = {
@@ -29,6 +31,8 @@ export type FeedItem = {
   criteria: Criterion[];
   reviewCount: number;
   status: "pending" | "reviewed";
+  /** True when the signed in viewer has already reviewed it. Always false logged out. */
+  reviewedByViewer: boolean;
   score?: ScoreBreakdown;
 };
 
@@ -83,7 +87,7 @@ export type SubmissionDetail = {
 
 /**
  * One review request in full: criteria, every review, every rating. Optional auth,
- * same as the feed — a visitor can read a request without an account, and a signed in
+ * same as the feed: a visitor can read a request without an account, and a signed in
  * viewer additionally gets the two flags that decide whether to show the review form.
  */
 export function getSubmission(id: string, token?: string | null): Promise<SubmissionDetail> {
