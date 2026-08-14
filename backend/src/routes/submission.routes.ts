@@ -22,11 +22,10 @@ submissionRoutes.post(
   catchAsync(reviewController.create)
 );
 
+/** Post a review request. All five validation rules live in the schema, not here. */
+submissionRoutes.post("/", writeLimiter, catchAsync(submissionController.create));
+
 // ---------------------------------------------------------------------------
 // Aaysha owns the rest of this file:
 //
-//   POST   /               post a review request, with all five validation rules
-//
-// Put the rules in services/, the queries in repositories/, the zod schemas in
-// models/. Use writeLimiter from middlewares/rateLimiter.middleware.ts.
-// ---------------------------------------------------------------------------
+

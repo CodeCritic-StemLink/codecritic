@@ -4,14 +4,17 @@ import type { ProfileInput, UpdateProfileInput } from "../models/user.schema";
 import type { User } from "../generated/prisma/client";
 import { buildInsights } from "./insights.service";
 import type { ProfileInsights } from "./insights.service";
+import { toReviewGivenItem, toReviewReceivedItem } from "./reviewList.service";
+import type { ReviewGivenItem, ReviewReceivedItem } from "./reviewList.service";
 
 // The rules about users. No req, no res, no prisma.
 //
 // This file can be called from a controller, from a script, or from a test, because it
 // takes plain values and gives plain values back.
 //
-// The insight counting itself lives in insights.service.ts, kept separate because it
-// is pure maths with no Prisma import, so it can be tested with no database.
+// The insight counting lives in insights.service.ts and the review list mapping in
+// reviewList.service.ts, kept separate because both are pure, with no Prisma import,
+// so they can be tested with no database.
 
 export type ProfileSubmission = {
   id: string;
@@ -38,6 +41,13 @@ export type PublicProfile = {
   reviewsReceived: number;
   insights: ProfileInsights;
   submissions: ProfileSubmission[];
+  /**
+   * The SRS asks that a user can "manage their own activity: requests they have
+   * posted, reviews they have given, and reviews they have received." The counts
+   * alone do not satisfy that, hence these two full lists alongside them.
+   */
+  reviewsGivenList: ReviewGivenItem[];
+  reviewsReceivedList: ReviewReceivedItem[];
 };
 
 export const userService = {
@@ -107,9 +117,9 @@ export const userService = {
       throw new NotFoundError("No user with that username.", "USER_NOT_FOUND");
     }
 
-    const [reviewsReceived, reviewsGiven, submissions] = await Promise.all([
-      userRepository.countReviewsReceived(user.id),
+    const [reviewsGiven, reviewsReceived, submissions] = await Promise.all([
       userRepository.findReviewsGivenForInsights(user.id),
+      userRepository.findReviewsReceived(user.id),
       userRepository.findSubmissionsByAuthor(user.id),
     ]);
 
@@ -120,7 +130,7 @@ export const userService = {
       githubUrl: user.githubUrl,
       karma: user.karma,
       reviewsGiven: reviewsGiven.length,
-      reviewsReceived,
+      reviewsReceived: reviewsReceived.length,
       insights: buildInsights(reviewsGiven),
       submissions: submissions.map((submission) => ({
         id: submission.id,
@@ -130,6 +140,8 @@ export const userService = {
         reviewCount: submission._count.reviews,
         status: submission._count.reviews === 0 ? "pending" : "reviewed",
       })),
+      reviewsGivenList: reviewsGiven.map(toReviewGivenItem),
+      reviewsReceivedList: reviewsReceived.map(toReviewReceivedItem),
     };
   },
 };
