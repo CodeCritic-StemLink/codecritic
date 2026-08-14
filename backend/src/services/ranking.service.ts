@@ -25,6 +25,9 @@ export const RECENCY_HALF_LIFE_HOURS = 48;
 /** A flat bonus for a submission nobody has reviewed yet. */
 export const NEEDS_HELP_POINTS = 6;
 
+/** Taken off a submission this viewer has already reviewed. */
+export const ALREADY_REVIEWED_PENALTY = 8;
+
 /** The parts of a score, kept separate so the UI can show why a post ranked where it did. */
 export type ScoreBreakdown = {
   total: number;
@@ -32,6 +35,8 @@ export type ScoreBreakdown = {
   matchedTags: string[];
   recencyPoints: number;
   needsHelpPoints: number;
+  /** Zero, or minus ALREADY_REVIEWED_PENALTY. Negative so the parts still add up. */
+  alreadyReviewedPoints: number;
 };
 
 /** The only things about a submission that the ranking cares about. */
@@ -39,7 +44,34 @@ export type RankableSubmission = {
   tags: string[];
   createdAt: Date;
   reviewCount: number;
+  /** True when the viewer has already written a review on this one. */
+  reviewedByViewer?: boolean;
 };
+
+/**
+ * How one tag is compared with another, everywhere in this project.
+ *
+ * Trimmed and lowercased, so "Node", "node" and " node " are one technology. Every
+ * comparison below goes through this, and so does the feed's tag filter, which is the
+ * point of it being exported: the filter and the ranking cannot drift apart into
+ * disagreeing about whether two tags are the same thing.
+ */
+export function normaliseTag(tag: string): string {
+  return tag.trim().toLowerCase();
+}
+
+/**
+ * Does this submission carry this tag?
+ *
+ * Used by the feed's tag filter. Case insensitive for the same reason matching is:
+ * somebody who typed "node" on their post should still be found by a reader who
+ * clicked "Node" in the sidebar.
+ */
+export function hasTag(submissionTags: string[], tag: string): boolean {
+  const wanted = normaliseTag(tag);
+
+  return submissionTags.some((candidate) => normaliseTag(candidate) === wanted);
+}
 
 /**
  * Which of this submission's tags does the viewer actually work with?
@@ -48,12 +80,12 @@ export type RankableSubmission = {
  * stack says "React". Duplicates in either list are ignored.
  */
 export function matchingTags(submissionTags: string[], viewerTechStack: string[]): string[] {
-  const stack = new Set(viewerTechStack.map((tag) => tag.trim().toLowerCase()));
+  const stack = new Set(viewerTechStack.map(normaliseTag));
   const seen = new Set<string>();
   const matches: string[] = [];
 
   for (const tag of submissionTags) {
-    const key = tag.trim().toLowerCase();
+    const key = normaliseTag(tag);
 
     if (stack.has(key) && !seen.has(key)) {
       seen.add(key);
@@ -88,6 +120,7 @@ export function recencyPoints(createdAt: Date, now: Date = new Date()): number {
  *   score = 12 per matching tag
  *         + up to 10 for being recent, halving every 48 hours
  *         + 6 if nobody has reviewed it yet
+ *         - 8 if you have already reviewed it
  *
  * Why tag matching is weighted highest: the SRS asks for requests matching the user's
  * own tech stack to appear ahead of ones that do not, so relevance has to beat
@@ -98,6 +131,13 @@ export function recencyPoints(createdAt: Date, now: Date = new Date()): number {
  * post is never seen by anyone. Six points is roughly half a tag match, so it lifts a
  * neglected post above an equally relevant one that has already been answered, without
  * ever outranking genuine relevance.
+ *
+ * Why the already-reviewed penalty exists: one review per person per submission is a
+ * rule the API enforces, so a submission you have reviewed is one you can do nothing
+ * more with. It is dead weight in your feed. Eight points pushes it below an otherwise
+ * identical one you have not answered, without hiding it, because the SRS asks for the
+ * same submissions reordered and because you may well want to find your own review
+ * again.
  */
 export function scoreSubmission(
   submission: RankableSubmission,
@@ -109,13 +149,15 @@ export function scoreSubmission(
   const tagPoints = matched.length * POINTS_PER_MATCHING_TAG;
   const recency = recencyPoints(submission.createdAt, now);
   const needsHelp = submission.reviewCount === 0 ? NEEDS_HELP_POINTS : 0;
+  const alreadyReviewed = submission.reviewedByViewer ? -ALREADY_REVIEWED_PENALTY : 0;
 
   return {
-    total: tagPoints + recency + needsHelp,
+    total: tagPoints + recency + needsHelp + alreadyReviewed,
     tagPoints,
     matchedTags: matched,
     recencyPoints: recency,
     needsHelpPoints: needsHelp,
+    alreadyReviewedPoints: alreadyReviewed,
   };
 }
 

@@ -1,6 +1,7 @@
 import { submissionRepository } from "../repositories/submission.repository";
 import type { SubmissionForFeed, SubmissionWithReviews } from "../repositories/submission.repository";
-import { rankSubmissions } from "./ranking.service";
+import { reviewRepository } from "../repositories/review.repository";
+import { rankSubmissions, hasTag } from "./ranking.service";
 import type { ScoreBreakdown } from "./ranking.service";
 import type { FeedQuery, CreateSubmissionInput } from "../models/submission.schema";
 import type { User } from "../generated/prisma/client";
@@ -19,6 +20,8 @@ export type FeedItem = {
   criteria: Array<{ id: string; label: string; position: number }>;
   reviewCount: number;
   status: "pending" | "reviewed";
+  /** True when this signed in viewer has already reviewed it. Always false logged out. */
+  reviewedByViewer: boolean;
   score?: ScoreBreakdown;
 };
 
@@ -64,7 +67,7 @@ export type SubmissionDetail = {
  * because a stored status is a second copy of a fact the Review table already holds, and
  * two copies can disagree. Counting cannot disagree with itself.
  */
-function toFeedItem(row: SubmissionForFeed): FeedItem {
+function toFeedItem(row: SubmissionForFeed, reviewedByViewer = false): FeedItem {
   const reviewCount = row._count.reviews;
 
   return {
@@ -78,6 +81,7 @@ function toFeedItem(row: SubmissionForFeed): FeedItem {
     criteria: row.criteria,
     reviewCount,
     status: reviewCount === 0 ? "pending" : "reviewed",
+    reviewedByViewer,
   };
 }
 
@@ -137,25 +141,43 @@ export const submissionService = {
   async getFeed(viewer: User | null, query: FeedQuery): Promise<FeedResult> {
     const rows = await submissionRepository.findManyForFeed({
       search: query.search,
-      tag: query.tag,
       status: query.status,
     });
 
-    const items = rows.map(toFeedItem);
-    const total = items.length;
+    /*
+     * The tag filter is applied here rather than in the query, because it has to ignore
+     * case and Postgres array containment does not. It goes through hasTag, the same
+     * comparison the ranking uses, so clicking "Node" in the sidebar finds a post
+     * somebody tagged "node" and the filter can never disagree with the scoring about
+     * whether two tags are the same technology.
+     *
+     * It costs nothing extra: this method already loads the whole matching set into
+     * memory in order to rank it before paging. See the note on ordering below.
+     */
+    const matching = query.tag ? rows.filter((row) => hasTag(row.tags, query.tag!)) : rows;
+
     const start = (query.page - 1) * query.limit;
 
     // Nobody signed in: newest first and nothing else. The repository already sorted by
     // createdAt descending, so there is nothing to do.
     if (!viewer) {
+      const items = matching.map((row) => toFeedItem(row));
+
       return {
         submissions: items.slice(start, start + query.limit),
         page: query.page,
         limit: query.limit,
-        total,
+        total: items.length,
         personalised: false,
       };
     }
+
+    // Which of these has this viewer already answered? One small query, and the ids it
+    // returns are what the already-reviewed penalty in the ranking works from.
+    const reviewed = await reviewRepository.submissionIdsReviewedBy(viewer.id);
+
+    const items = matching.map((row) => toFeedItem(row, reviewed.has(row.id)));
+    const total = items.length;
 
     const ranked = rankSubmissions(items, viewer.techStack).map((item) => ({
       ...item,
@@ -174,7 +196,7 @@ export const submissionService = {
   /**
    * One submission in full: criteria, every review, every rating, and two flags
    * telling the UI whether this viewer may see a review button. Optional auth, same
-   * reasoning as the feed — a visitor can read a request without an account.
+   * reasoning as the feed: a visitor can read a request without an account.
    */
   async getById(viewer: User | null, id: string): Promise<SubmissionDetail | null> {
     const row = await submissionRepository.findByIdWithReviews(id);
@@ -191,7 +213,7 @@ export const submissionService = {
    *
    * The author is whichever User row the caller's own token resolved to. There is no
    * parameter here for a different author id, so there is no way to call this on
-   * somebody else's behalf even by mistake — the same shape of guarantee PATCH /users/me
+   * somebody else's behalf even by mistake, the same shape of guarantee PATCH /users/me
    * gives by having no id in its route.
    *
    * Returns the same shape a feed row does: a fresh submission always has zero reviews,
