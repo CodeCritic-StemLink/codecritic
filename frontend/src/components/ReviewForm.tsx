@@ -10,7 +10,7 @@ import { ApiError } from "@/api/api";
 import type { Criterion } from "@/services/submission.service";
 
 // The review form. One score control per criterion, defined by whoever posted the
-// submission — this component has no idea what the criteria will be ahead of time,
+// submission, and this component has no idea what the criteria will be ahead of time,
 // same as the SRS asks for.
 
 type Props = {

@@ -94,16 +94,40 @@ Run against the local API on port 4000 with the seed data loaded, on 2026-08-13.
     cd backend
     npx jest tests/services/ranking.service.test.ts
 
-Actual:
+Actual, re-run 2026-08-14 after the already-reviewed penalty was added:
 
     Test Suites: 1 passed, 1 total
-    Tests:       19 passed, 19 total
+    Tests:       29 passed, 29 total
 
-Those 19 cover the parts a curl command cannot show: that the three pieces of the score
-add up to the total, that one matching tag beats the entire recency range, that an
-unreviewed submission outranks an equally matched reviewed one, and that the needs-help
-bonus never outranks a genuine extra tag match. They need no database, which is why they
-run anywhere.
+Those 29 cover the parts a curl command cannot show: that every piece of the score adds
+up to the total, that one matching tag beats the entire recency range, that an unreviewed
+submission outranks an equally matched reviewed one, that the needs-help bonus never
+outranks a genuine extra tag match, that a submission you have already reviewed drops
+below an identical one you have not, and that the penalty is still smaller than a tag
+match so relevance wins. They need no database, which is why they run anywhere.
+
+Pass
+
+### The tag filter ignores case
+
+Tags are typed by hand on the post form, so "Node" and "node" both really occur in the
+data. Before this change `?tag=Node` missed every submission tagged in lower case, and
+the sidebar listed "Node 3" and "node 1" as two separate technologies.
+
+Command:
+
+    curl -s "http://localhost:4000/api/submissions?tag=Node&limit=50"
+    curl -s "http://localhost:4000/api/submissions?tag=node&limit=50"
+    curl -s "http://localhost:4000/api/submissions?tag=NODE&limit=50"
+
+Actual, 2026-08-14:
+
+    ?tag=Node -> 4 results: react/node/reactnative | Node/Express/Prisma | Prisma/Node | PostgreSQL/Node
+    ?tag=node -> 4 results: react/node/reactnative | Node/Express/Prisma | Prisma/Node | PostgreSQL/Node
+    ?tag=NODE -> 4 results: react/node/reactnative | Node/Express/Prisma | Prisma/Node | PostgreSQL/Node
+
+All three spellings return the same four rows, including the one tagged in lower case.
+The sidebar counts them as one technology as well, reading "Node 4".
 
 Pass
 
@@ -223,14 +247,71 @@ yet, so nothing was visibly broken, but the function promised behaviour it did n
 
 Pass
 
+### Pagination
+
+The page size is 20 and there were only 13 submissions, so the pager had nothing to do
+and could not be checked. Verified on 2026-08-14 by temporarily setting `FEED_PAGE_SIZE`
+to 4 in `frontend/src/constants/constants.ts` and opening `/?page=2`.
+
+Actual:
+
+    Showing 5 to 8 of 13
+    Previous   2 / 4   Next
+
+Four submissions on the page, the correct range, and both steps live. `FEED_PAGE_SIZE`
+was put back to 20 immediately afterwards. The seed data has since been extended past 20
+submissions so the pager is reachable on the real feed without editing anything.
+
+Pass
+
+### Nothing overflows sideways, at any screen size
+
+Measured rather than eyeballed, on 2026-08-14, by loading each page in a frame of a
+fixed width and comparing `scrollWidth` with the viewport.
+
+| Page | 375 | 768 | 1280 |
+| --- | --- | --- | --- |
+| Feed | 0 | 0 | 0 |
+| Profile | 0 | n/a | 0 |
+| Sign in | n/a | n/a | 0 |
+| Sign up | n/a | n/a | 0 |
+
+Zero means no horizontal overflow. Sign in and sign up also had no vertical overflow at
+1280 x 800, so neither scrolls.
+
+Pass
+
+### The navigation bar on a phone
+
+Aqeel reported the navbar looking wrong on mobile. Measured by building the signed in
+bar at three phone widths and comparing the width it needs with the width it has.
+
+Before:
+
+    320px wide -> needs 437px, overflows by 117px
+    375px wide -> needs 437px, overflows by  62px
+    414px wide -> needs 437px, overflows by  23px
+
+The karma chip and "Post a request" are both `whitespace-nowrap`, so rather than
+wrapping they pushed the avatar off the edge. After dropping the word "CodeCritic" below
+`sm`, shortening the karma chip to the number alone, and turning "Post a request" into a
+plus icon:
+
+    320px -> needs 320px, overflow 0
+    375px -> needs 375px, overflow 0
+    414px -> needs 414px, overflow 0
+
+Pass
+
 ### Still to do
 
 The two checks that need a signed in user, because they need a real Clerk token:
 
 - a React developer's feed puts React tagged submissions first
 - a Node developer's feed puts a different submission first, from the same set
+- a submission you have reviewed drops below an identical one you have not
 
-The ranking maths behind both is covered by the 19 unit tests above. What is not yet
+The ranking maths behind all three is covered by the 29 unit tests above. What is not yet
 written up is the end to end proof through the API with a token, and the screenshot of
 the "Why this order?" breakdown. Do this once the demo accounts are signed in.
 

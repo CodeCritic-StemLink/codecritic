@@ -38,9 +38,15 @@ to see it, not to sit on page three under ten Rust posts.
 | --- | --- |
 | Logged out sees newest first | `GET /submissions` with no token sorts by `createdAt` |
 | Logged in sees the same set, reordered by tech stack | Tag matching, 12 points per matching tag |
-| **At least one improvement of our own** | **Two:** recency decay and a needs-help boost |
-| Demonstrable with real data | The "Why this order?" toggle prints the maths on every card |
+| **At least one improvement of our own** | **Three:** recency decay, a needs-help boost, and an already-reviewed penalty |
+| Demonstrable with real data | The "Why this order?" toggle explains every card in words |
 | Present the engine separately | This document |
+
+The SRS lists possible improvements: recency weighting, review history, skill-level
+matching, weighting certain technologies more heavily. Recency is on their list. **The
+needs-help boost is not, and it is the one to present.** We also deliberately rejected
+one of their suggestions, weighting certain technologies more heavily, for a reason
+given in section 10.
 
 ---
 
@@ -50,9 +56,10 @@ to see it, not to sit on page three under ten Rust posts.
 score  =  12 × (number of the post's tags that match your stack)
         + round(10 × 0.5 ^ (hoursOld / 48))
         + 6  if the post has zero reviews
+        - 8  if you have already reviewed it
 ```
 
-Three parts. Read them as three separate questions.
+Four parts. Read them as four separate questions.
 
 ### Part one: relevance, 12 points per matching tag
 
@@ -67,16 +74,43 @@ Matching ignores capitals, so `react` matches `React`. A repeated tag counts onc
 
 **Question it answers: is this still worth answering?**
 
+The rule in one sentence: **a brand new post gets 10 points, and every 48 hours whatever
+is left is cut in half.**
+
 ```
-brand new    10 points
-2 days old    5 points   (half)
-4 days old    3 points   (half again)
-8 days old    1 point
-a year old    0 points
+age        what is left                points
+────       ────────────                ──────
+0 h        all of it                     10
+1 day      10 × 0.71                      7
+2 days     10 × 0.5                       5     one halving
+3 days     10 × 0.35                      4
+4 days     10 × 0.25                      3     two halvings
+6 days     10 × 0.125                     1
+8 days     10 × 0.0625                    1
+10 days    10 × 0.031                     0
+a year     nothing worth counting         0
 ```
 
-It halves every 48 hours and never goes below zero. This is a **decay curve**, not a
-cut off: an old post fades rather than disappearing.
+The `0.5 ^ (hoursOld / 48)` in the formula is only notation for that sentence:
+
+- `hoursOld / 48` is **how many halvings have happened**. A 96 hour old post: 2.
+- `0.5 ^ 2` is 0.25, so **a quarter is left**.
+- `× 10` gives 2.5, rounded to 3.
+
+Time itself is measured in one line, in `recencyPoints`:
+
+```ts
+const hoursOld = Math.max(0, (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60));
+```
+
+`getTime()` returns milliseconds, so this is "now minus posted, divided by the number of
+milliseconds in an hour". **The `Math.max(0, ...)` is there for a clock that is wrong**:
+a post that looks like it is from the future is treated as brand new rather than scoring
+above the maximum.
+
+It never goes below zero. This is a **decay curve, not a cut off**. A cut off means a
+post is worth full marks at 47 hours and nothing at 49, and nobody can defend that
+boundary. A curve means age always costs a little and nothing ever vanishes suddenly.
 
 ### Part three: the needs-help boost, 6 points
 
@@ -85,6 +119,21 @@ cut off: an old post fades rather than disappearing.
 A submission with **zero reviews** gets 6 points. One with reviews gets nothing extra.
 
 This is the part we are proudest of, and section 5 explains why.
+
+### Part four: the already-reviewed penalty, minus 8
+
+**Question it answers: is there anything left for me to do here?**
+
+One review per person per submission is a rule the API enforces. So a submission you
+have already reviewed is one you can do **nothing more with**. It is dead weight in your
+feed, and it loses 8 points.
+
+It **drops rather than disappears**, for two reasons. The SRS asks for the same
+submissions reordered, not filtered. And you may well want to find your own review
+again.
+
+The card says **"you reviewed this"** underneath, so a post that has quietly moved down
+does not look like it moved for no reason.
 
 ---
 
@@ -151,21 +200,58 @@ test("the needs-help bonus never outranks a genuine extra tag match")
 
 ---
 
-## 6. Why the numbers are 12, 10 and 6
+## 6. Why the numbers are 12, 10, 6 and 8
 
-Expect to be asked "why 12 and not 5?". The honest answer is that **the ratios matter,
-not the numbers.**
-
-We chose them so that three statements are always true:
+Expect to be asked "why 12 and not 5?". **These are not measurements. They are four
+sentences about what matters more than what.**
 
 | Statement | Why the numbers make it true |
 | --- | --- |
 | One matching tag beats any amount of freshness | 12 > 10, the largest recency score |
 | An unanswered post beats an equally relevant answered one | 6 > 0 |
 | A real extra tag match beats the needs-help boost | 12 > 6 |
+| A post you can still act on beats one you cannot | 8 > 0 |
+| But relevance survives the penalty | 8 < 12 |
 
-Those three sentences **are** the design. The numbers are the smallest whole numbers
-that satisfy all three at once. If you doubled all of them nothing would change.
+Those sentences **are** the design.
+
+### Why 12 specifically
+
+Because **recency can never exceed 10**. So "should one matching tag beat the freshest
+possible post?" becomes "is this number bigger than 10?" We said yes, so it has to be 11
+or more, and 12 is the round one.
+
+Watch what breaks at 5:
+
+```
+brand new Rust post, you do not know Rust      0 + 10 + 0  = 10
+2 day old React post, you do know React        5 +  5 + 0  = 10
+```
+
+**A tie.** The React developer's feed fills with Rust. The SRS specifically requires
+posts matching your stack to come first, so 5 fails the requirement outright.
+
+### Why 6 specifically
+
+**6 is half of 12: deliberately "half a tag".**
+
+| If it were | What would happen |
+| --- | --- |
+| 1 or 2 | Almost never changes an order. Decoration, not a feature. |
+| **6** | Breaks a tie between two posts you can equally help with. Correct. |
+| 12 or more | "Nobody reviewed it" would count as much as "you know this technology", pushing Rust posts at a React developer. |
+
+### Why 8 specifically
+
+Between the two: **bigger than the needs-help boost, smaller than a tag match.** So a
+post you have reviewed drops below an unanswered one, but a post you have reviewed in
+your own technology still beats one in a technology you have never touched. The penalty
+sorts your feed; it does not censor it.
+
+### The honest answer to "why not 20 and 15?"
+
+**Nothing would change.** Double every number and every order is identical. Only the
+ratios do any work. That answer is stronger than pretending we measured something.
 
 Each is a named constant, so a mentor asking "what if you tuned this?" can watch it
 change in one line:
@@ -175,6 +261,7 @@ export const POINTS_PER_MATCHING_TAG = 12;
 export const MAX_RECENCY_POINTS = 10;
 export const RECENCY_HALF_LIFE_HOURS = 48;
 export const NEEDS_HELP_POINTS = 6;
+export const ALREADY_REVIEWED_PENALTY = 8;
 ```
 
 ---
@@ -229,34 +316,88 @@ never reach page one.
 Our service ranks the whole matching set and only then slices. There is a comment at
 that exact line saying so.
 
+**Yes, it searches all of the posts.** With 1000 submissions, `GET /submissions` loads
+all 1000 matching rows, scores all 1000, sorts all 1000, and hands back the 20 you asked
+for. That is the point: page one has to be the best 20 out of everything, not the newest
+20 shuffled. The honest answer to "what about a million?" is that the scoring would move
+into SQL so the database sorts and pages in one query, and that is written down in the
+service as a comment rather than pretended away.
+
+---
+
+## 8b. What is not Feature 01
+
+Two things on the feed page look related and are not, and it is worth being clear at
+assessment.
+
+| | The tag rail on the left | Feature 01 |
+| --- | --- | --- |
+| What it does | **Removes** posts | **Reorders** posts |
+| Runs where | Front end, `lib/tags.ts` | Back end, `ranking.service.ts` |
+| Depends on who you are | No, same for everyone | Yes, that is the whole point |
+
+**Feature 01 filters nothing.** Say this clearly, because "we filter by tech stack" is
+the easiest wrong sentence to say about it, and it describes a design the SRS
+specifically did not ask for. Every submission is in every feed. A Rust post in a React
+developer's feed is still there, further down.
+
+If we hid non-matching posts we would have failed the requirement, and a beginner
+posting in an unpopular technology would be invisible to everybody, which is the exact
+harm the needs-help boost exists to prevent.
+
+The tag rail counts the technologies of the submissions currently on screen, takes the
+top eight, and links each one to `?tag=...`. It is headed **"In these results"** rather
+than "Technologies" because that is what it counts. Calling it "Technologies" would
+imply totals across the whole site, which would need a counting endpoint the SRS never
+asked for.
+
 ---
 
 ## 9. Proving it works
 
 ### The "Why this order?" toggle
 
-Signed in, the feed has a **Why this order?** button. Click it and every card shows its
-own maths:
+Signed in, the feed has a **Why this order?** button. It is **off by default**. Turn it
+on and one line appears under each card:
 
 ```
-score 33 = tags 24 (React, Tailwind) + fresh 3 + needs help 6
+ 33   +24 React, Tailwind  ·  +3 recent  ·  +6 unanswered
 ```
+
+It has been through three versions, and the reason is worth telling because it is the
+same lesson twice.
+
+| Version | Problem |
+| --- | --- |
+| `score 33 = tags 24 (React, Tailwind) + fresh 3 + needs help 6` | Correct and unreadable. Nobody outside the group knows what "fresh 3" is. |
+| A headed panel with one labelled row per part and a total | Readable, and four times the height of the card it was explaining. |
+| **One line, score first, parts as small print** | What is there now. |
+
+A part worth zero is **left out entirely** rather than given a row saying nothing
+happened. If every part is zero, which is what an old answered post in a technology you
+do not use looks like, it says "nothing matched".
 
 This turns the demo from "trust me, it is sorted" into arithmetic anybody can check on
 screen. **Use it in the live demonstration.** It is also just a URL, `/?why=1`, so it
 can be linked to.
 
+Nothing is calculated in the browser. `ScoreExplainer.tsx` only puts words to numbers
+the server handed it.
+
 ### The tests
 
-19 automated tests in `backend/tests/services/ranking.service.test.ts`, covering the
+30 automated tests in `backend/tests/services/ranking.service.test.ts`, covering the
 parts a demo cannot show:
 
-- the three pieces add up to the total
+- every piece adds up to the total
 - one matching tag beats the entire recency range
 - an unanswered post outranks an equally matched answered one
 - the needs-help boost never beats an extra tag match
+- a post you have already reviewed drops below an identical one you have not
+- the penalty is smaller than a tag match, so relevance still wins
 - the same submissions come back, only reordered, **nothing dropped or added**
 - equal scores break the tie on newest first, so the order is never random
+- the tag filter and the ranking compare tags the same way
 
 They need no database, because `ranking.service.ts` imports nothing but its own maths.
 
@@ -293,9 +434,24 @@ Saying these out loud is stronger than being caught by them.
 needs-help boost, which is still a sensible order but not a personal one. This is why
 sign up now forces you to profile setup.
 
-**Tag matching is exact, after lowercasing.** `React` matches `react`, but `ReactJS`
-and `React.js` do not match `React`. A synonym table would fix it and would need
-maintaining by hand.
+**Tag matching is exact, after trimming and lowercasing.** `React` matches `react` and
+` React `, but `ReactJS` and `React.js` do not match `React`. A synonym table would fix
+it and would need maintaining by hand.
+
+One rule, one place. `normaliseTag` in `ranking.service.ts` is used by **four** things
+that all have to agree about whether two tags are the same technology:
+
+| Where | What it does |
+| --- | --- |
+| `ranking.service.ts` | Scores a tag match |
+| `submission.service.ts` | Filters the feed by `?tag=` |
+| `insights.service.ts` | Counts "reviews most often in" on a profile |
+| `frontend/lib/tags.ts` | Counts the feed's tag rail |
+
+All four disagreed at one point, and each disagreement looked like a different bug:
+`?tag=Node` silently missed lower case posts, the feed rail listed "Node 3" and
+"node 1", and a profile did the same. **One rule in one place is why they cannot drift
+apart again.**
 
 **Scores are computed on every request.** Fine for a demo, and fine into the thousands.
 A very large site would cache them.
@@ -327,31 +483,20 @@ answer Prisma questions.
 tag matching rather than a replacement, and we would want the numbers argued through by
 the group rather than picked by one person the night before submission.
 
-### 2. Do not show me what I have already reviewed
-
-Once you have reviewed a submission you cannot review it again, so it is dead weight in
-your feed. A penalty rather than hiding it, since the author still wants to find it:
-
-```
-score -= 8  if you have already reviewed this
-```
-
-The data is there: the detail endpoint already computes `hasReviewed`.
-
-### 3. Difficulty matching
+### 2. Difficulty matching
 
 The SRS suggests skill-level matching. We have no difficulty field, but Karma is a
 rough proxy: a reviewer with 50 Karma could be nudged toward posts nobody else has
 managed to answer. **We rejected it for now** because Karma measures how much you
 review, not how well, and treating volume as skill would be a claim we cannot support.
 
-### 4. Let a person see why a post did *not* rank
+### 3. Let a person see why a post did *not* rank
 
 The "Why this order?" toggle explains what is there. The more interesting question is
 often what is missing. Showing "this post scored 4 because none of its tags match your
 stack" would teach people to fill in their stack properly.
 
-### 5. Cache the scores
+### 4. Cache the scores
 
 Recompute only when a submission is posted or reviewed, rather than on every request.
 Nothing needs it yet, and doing it early would trade explainability for speed we do not

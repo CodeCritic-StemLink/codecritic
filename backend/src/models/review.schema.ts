@@ -1,14 +1,14 @@
 import { BadRequestError } from "../errors/appError";
 
-// Pure validation for a review body. No prisma, no req, no res — takes plain values,
+// Pure validation for a review body. No prisma, no req, no res: takes plain values,
 // returns plain values or throws. This has to be a hand-written function rather than
 // a single Zod schema because the API contract requires the checks to fail in a
 // strict order (see docs/api-design.md), and a database-backed check like "does this
 // criterion belong to this submission" cannot live inside a Zod schema at all.
 //
 // Living in models/ rather than services/ matches the rule in docs/architecture.md
-// that a file in models/ may import nothing but zod-adjacent helpers — this file
-// imports only the error type, nothing that touches a database — which is what makes
+// that a file in models/ may import nothing but zod-adjacent helpers. This file
+// imports only the error type, nothing that touches a database, which is what makes
 // it safely importable from a test with no DATABASE_URL set.
 
 const MAX_TEXT_LENGTH = 5000;

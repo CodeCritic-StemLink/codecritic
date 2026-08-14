@@ -65,9 +65,9 @@ Success returns the resource directly. Errors always look like this:
 | Method | Path | Auth | Purpose | State | Owner |
 | --- | --- | --- | --- | --- | --- |
 | GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. | Plain version works, ranking to come | Osini |
-| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | In review, PR #4 | Andrew |
-| POST | `/submissions` | Required | Post a new review request. | **Not started** | Aaysha, see `aaysha-submission-feature.md` |
-| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | In review, PR #4 | Andrew |
+| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | **Built** | Andrew |
+| POST | `/submissions` | Required | Post a new review request. | **Built** | Aaysha |
+| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | **Built** | Andrew |
 | GET | `/users/:username` | Optional | Public profile with insights. | **Built** | Aqeel |
 | POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. | **Built** | Osini |
 | PATCH | `/users/me` | Required | Edit your own profile only. | **Built** | Osini |
@@ -103,19 +103,32 @@ on `createdAt` descending.
 score = 12 * (number of the submission's tags found in the user's techStack)
       + round(10 * 0.5 ^ (hoursOld / 48))
       + 6 if the submission has zero reviews
+      - 8 if this user has already reviewed it
 ```
 
-The three parts, and why each one is there:
+The four parts, and why each one is there:
 
 | Part | Weight | Reason |
 | --- | --- | --- |
 | Tag match | 12 per matching tag | The spec's core requirement. Highest weight because relevance beats freshness. A perfect stack match should outrank anything. |
 | Recency | up to 10, halving every 48 hours | A month old request is less useful to answer than a fresh one. Decay rather than a cliff, so nothing vanishes suddenly. |
 | Zero reviews | flat 6 | Our own ranking improvement. Without it, requests that already have attention keep getting more, and a beginner's first post is never seen. |
+| Already reviewed by you | flat -8 | One review per person per submission is a rule, so a request you have answered is one you can do nothing more with. Smaller than a tag match, so relevance still wins and nothing is hidden. |
 
 The scoring runs **on the server**, inside this endpoint. The browser never receives the scoring
 code. Two reasons: the client cannot be trusted to sort honestly, and the database already holds
 every value the formula needs.
+
+**Ranked before paged.** The endpoint loads every submission matching the filters, scores all of
+them, sorts, and only then cuts out the requested page. Paging first would return a page chosen
+by date and merely shuffled, so the most relevant request on page three could never reach page
+one.
+
+**The tag filter ignores case.** `?tag=Node`, `?tag=node` and `?tag=NODE` return the same rows,
+because tags are typed by hand on the post form and both spellings really occur. It goes through
+the same comparison the scoring uses, so the filter and the ranking can never disagree about
+whether two tags are the same technology. This one filter is applied in the service rather than
+in SQL, since Postgres array containment is exact and case sensitive.
 
 **Response 200**
 
@@ -132,13 +145,15 @@ every value the formula needs.
       "author": { "username": "andrew_builds", "karma": 22 },
       "reviewCount": 0,
       "status": "pending",
+      "reviewedByViewer": false,
       "criteria": [{ "id": "c1", "label": "Code Quality", "position": 0 }],
       "score": {
         "total": 40,
         "tagPoints": 24,
         "matchedTags": ["React", "Next.js"],
         "recencyPoints": 10,
-        "needsHelpPoints": 6
+        "needsHelpPoints": 6,
+        "alreadyReviewedPoints": 0
       }
     }
   ],
@@ -151,6 +166,11 @@ every value the formula needs.
 
 `score` is only present when `personalised` is true. It is what powers the "Why this order?"
 toggle in the UI, which turns the demo from a claim into visible proof.
+
+`reviewedByViewer` is always `false` for a logged out visitor, since there is nobody for it to
+be about. Signed in it drives both the `-8` in the score and the "you reviewed this" line on the
+card, so a request that has quietly dropped down the feed does not look like it moved for no
+reason.
 
 ---
 

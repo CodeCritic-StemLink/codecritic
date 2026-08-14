@@ -22,6 +22,29 @@ A public page at `/profile/:username` answers three questions:
    GitHub link            requests posted               activity by month
 ```
 
+The page is four bands, widest thing first:
+
+```
+   ┌──────────────────────────────────────────────────────────┐
+   │  avatar, name, bio, technologies      [Edit]  3 stats    │  who they are
+   ├────────────────┬────────────────┬────────────────────────┤
+   │ reviews in     │ average score  │ reviews by month       │  the insights
+   ├────────────────┴────────────────┴────────────────────────┤
+   │  requests posted, up to four across                      │  what they asked
+   ├───────────────────────────┬──────────────────────────────┤
+   │  reviews written          │  reviews received            │  what they did
+   └───────────────────────────┴──────────────────────────────┘
+```
+
+It was one narrow column with a rail beside it, which meant a very tall page where you
+scrolled past everything to reach the reviews, and an empty stripe down both sides of a
+wide monitor. Each band lays out in as many columns as there is room for and collapses
+to one on a phone.
+
+**Reviews written and reviews received sit side by side deliberately.** They are the
+pair the SRS warns is easy to get the wrong way round, and next to each other the
+difference is visible rather than something you have to remember while scrolling.
+
 Anyone can view it, signed in or not, because the SRS requires profiles to be public.
 
 ---
@@ -41,6 +64,58 @@ We went past the requirement in one place: the SRS asks for *counts* of reviews 
 and received. We show the **full text of every review** as well, because the SRS
 elsewhere says a user must be able to *manage* their activity, and a number is not
 something you can read.
+
+---
+
+## 2b. Editing your own profile
+
+**The SRS rule is that you may not edit *another* user's profile.** It says nothing
+against editing your own, and it does require a user to manage their own activity, so
+editing your own is expected rather than merely allowed.
+
+An **Edit profile** button sits beside your username, shown only when you are looking at
+yourself. It opens `/profile/setup`, which doubles as the edit form: it loads what you
+already have, fills the fields in, and changes its wording to "Edit your profile" and
+"Save changes".
+
+That form existed from the first day and **nothing linked to it**, so in practice nobody
+could add a technology or fix their bio after sign up. The button is the whole fix.
+
+### Why nobody can edit somebody else's
+
+This is a likely question, and the answer is better than "we check permissions".
+
+```
+POST /users/sync
+   body:  { username, bio, techStack, githubUrl }
+   token: proves you are Clerk user_2abc...
+
+   the row updated is chosen by the TOKEN, never by anything in the body
+```
+
+**There is no user id in the request body at all.** You cannot name a victim, because
+there is nowhere to put their name. Sending `clerkId` or `id` anyway achieves nothing:
+zod strips fields the schema does not declare, exactly as it does with `karma`.
+
+So the attack is not blocked, it is **impossible to express**. Hiding the Edit button on
+somebody else's profile is politeness, not security.
+
+### What editing cannot touch
+
+`karma`, every submission and every review are untouched by the upsert. Saving the form
+again does not reset your points or lose your posts, and the page says so.
+
+### Technologies are free text
+
+The setup form offers eleven suggestions and a box to type anything else. **The
+suggestions are shortcuts, not a list of what exists.**
+
+They had to become shortcuts. The post form has always allowed any tag, so a fixed list
+here meant somebody could post a Vue request that no reader could ever match, because no
+reader could say they knew Vue. That gap damaged Feature 01 directly.
+
+Up to **20 technologies**, which is the ceiling `models/user.schema.ts` enforces. The
+API never had a fixed list; only the form did.
 
 ---
 
@@ -150,6 +225,12 @@ Those are often not the same.
 
 Ties break alphabetically, so the list never shuffles between page loads for no reason.
 
+**Spellings are grouped.** Tags are typed by hand on the post form, so a profile listed
+"Node 2" and "node 1" as two technologies. `insights.service.ts` imports `normaliseTag`
+from the ranking rather than writing its own comparison, so a profile, the feed's tag
+rail and the ranking itself cannot disagree about whether two tags are the same thing.
+The spelling shown is whichever was used most.
+
 ### Average score given: `6.3`
 
 Every rating across every review this person wrote, added up and divided.
@@ -234,8 +315,11 @@ choice, not an oversight, but it is worth saying rather than pretending Karma me
 **The average score can be gamed.** Someone who rates everything 10 has a high average
 and it means nothing. It is shown as information, not as a judgement.
 
-**Nothing is paginated.** A user with 500 reviews would render all 500. Fine at this
-size, and the same fix as the feed if it ever mattered.
+**The lists page four at a time.** Requests posted, reviews written and reviews received
+each have their own pager, each keeping its place in the query string under its own key,
+so turning to page two of one does not send the other two back to page one. The API
+still returns every row and the paging happens in the page, which is fine at this size
+and would become a server side limit and offset on a busy site.
 
 ---
 
@@ -282,3 +366,16 @@ everybody zero". Null lets the page say "no scores given yet" instead of lying.
 
 **Why is status not stored on the submission?** Pending versus reviewed is derived by
 counting reviews. A stored flag could go stale; a derived one cannot.
+
+**Can a user edit their profile after signing up?** Yes. Edit profile beside your
+username on your own profile page. The SRS forbids editing *another* user's profile, not
+your own.
+
+**How do you stop somebody editing another user's profile?** There is no user id in the
+body of `POST /users/sync`. The row updated is whichever one the caller's own token
+resolves to, so there is nothing to forge. Anything extra sent in the body is stripped by
+zod before our code sees it.
+
+**Why can people type their own technologies?** Because the post form has always allowed
+any tag. A fixed list on the profile meant a Vue request could never match anybody, which
+broke Feature 01 for every technology outside our eleven suggestions.
