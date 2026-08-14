@@ -73,13 +73,50 @@ something you can read.
 against editing your own, and it does require a user to manage their own activity, so
 editing your own is expected rather than merely allowed.
 
-An **Edit profile** button sits beside your username, shown only when you are looking at
-yourself. It opens `/profile/setup`, which doubles as the edit form: it loads what you
-already have, fills the fields in, and changes its wording to "Edit your profile" and
-"Save changes".
+An **Edit profile** button sits at the top right of your own profile header. It opens
+`/profile/setup`, which doubles as the edit form: it loads what you already have, fills
+the fields in, and changes its wording to "Edit your profile" and "Save changes".
 
 That form existed from the first day and **nothing linked to it**, so in practice nobody
 could add a technology or fix their bio after sign up. The button is the whole fix.
+
+### The form will not save what it could not first read
+
+This is worth being able to explain, because it was a real bug and the fix is a good
+answer to "how do you stop a partial failure corrupting data".
+
+`POST /users/sync` writes **every** column it is given, which is right for the first
+save when there is no row yet. The form used it for edits too, and it treated **any**
+failure to read the existing profile as "this person has no profile yet".
+
+Two things then went wrong together:
+
+```
+Clerk hands back getToken before it has a session, and it returns null
+      ↓
+the loader gave up silently and never ran again
+      ↓
+blank form, headed "Finish your profile", for somebody who had one
+      ↓
+saving wrote those blanks over a real bio and tech stack
+```
+
+From the outside it looked exactly like the site had forgotten the profile. **It had
+not.** The row was intact right up until the save flattened it.
+
+Three changes fix it:
+
+| Change | Why |
+| --- | --- |
+| Wait for Clerk's `isLoaded` before asking | The loader no longer gives up on a token that is merely not ready yet |
+| **"could not read" is its own state**, not "no profile" | Only `USER_NOT_FOUND` means there is nothing stored. A server that is down means we do not know |
+| Edits go through `PATCH /users/me` | A partial update. A field left out is left alone, so it cannot null anything |
+
+When the state is "could not read", the form is **disabled** and says so, with a retry
+button. It is not possible to type into it, let alone save it.
+
+The decision itself lives in `frontend/src/lib/profileLoad.ts` with **11 tests**, rather
+than in a catch block inside the page, because it is the exact line the bug lived on.
 
 ### Why nobody can edit somebody else's
 
@@ -367,9 +404,18 @@ everybody zero". Null lets the page say "no scores given yet" instead of lying.
 **Why is status not stored on the submission?** Pending versus reviewed is derived by
 counting reviews. A stored flag could go stale; a derived one cannot.
 
-**Can a user edit their profile after signing up?** Yes. Edit profile beside your
-username on your own profile page. The SRS forbids editing *another* user's profile, not
-your own.
+**Can a user edit their profile after signing up?** Yes. Edit profile at the top right
+of your own profile page. The SRS forbids editing *another* user's profile, not your
+own.
+
+**What happens if the API is down when you open the edit form?** The form loads
+disabled, says it could not read your profile, and offers a retry. It will not save.
+Sending a blank form through a write that touches every column is how a profile gets
+wiped, so the form refuses to save anything it could not first read.
+
+**Why does editing use PATCH and first-time setup use POST?** POST /users/sync creates
+the row and writes every column, which is right when there is nothing to lose. PATCH
+/users/me only touches the fields it is sent, which is what an edit should do.
 
 **How do you stop somebody editing another user's profile?** There is no user id in the
 body of `POST /users/sync`. The row updated is whichever one the caller's own token

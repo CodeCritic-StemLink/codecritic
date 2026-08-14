@@ -392,7 +392,23 @@ identity has never been seen, updates it if it has.
 
 ### PATCH /users/me
 
-Edit your own profile. Same fields and same validation as `/users/sync`.
+Edit your own profile. Same fields and same validation as `/users/sync`, with one difference that
+matters more than it looks:
+
+| | `POST /users/sync` | `PATCH /users/me` |
+| --- | --- | --- |
+| Creates the row if missing | Yes | No |
+| Fields left out of the body | **Set to null** | **Left alone** |
+| Used by | The very first save | Every edit after it |
+
+**The front end picks between them deliberately.** Sync writing every column is correct when there
+is no row yet and nothing to lose. Once a profile exists, a save that could not first read what was
+there must not be able to flatten it, so an edit is a partial update.
+
+This was a real bug, not a hypothetical. The setup form used sync for edits and treated any failure
+to read the existing profile as "this person has no profile", so if the API was restarting when the
+page opened, the form appeared blank and saving it wrote blanks over a real bio and tech stack. The
+form now refuses to save anything it could not first read. See `docs/feature-02-profiles.md`.
 
 There is deliberately no `PATCH /users/:id`. The route has no id in it at all, so there is no way
 to aim it at somebody else's row. That is the simplest possible answer to the spec's requirement

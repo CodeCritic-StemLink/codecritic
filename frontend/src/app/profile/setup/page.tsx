@@ -1,19 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import Link from "next/link";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Loader2, Plus, RotateCw, Sparkles, TriangleAlert, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageShell } from "@/components/PageShell";
 import { BackLink } from "@/components/BackLink";
-import { getMe, syncProfile } from "@/services/user.service";
+import { getMe, syncProfile, updateProfile } from "@/services/user.service";
 import { ApiError } from "@/api/api";
 import { normaliseTag } from "@/lib/tags";
+import { canSaveProfile, classifyProfileLoadFailure } from "@/lib/profileLoad";
+import type { ProfileLoadState } from "@/lib/profileLoad";
 
 // Finish setting up your profile.
 //
@@ -64,9 +66,32 @@ const SUGGESTIONS = [
 /** The same ceiling the API enforces in models/user.schema.ts. */
 const MAX_TECH = 20;
 
+/*
+ * What we know about the profile this person already has.
+ *
+ * Four states, not a boolean, and the fourth is the whole point:
+ *
+ *   loading      we have not asked yet, or the answer has not come back
+ *   new          asked, and there is genuinely no profile yet
+ *   existing     asked, and here it is, already in the form
+ *   unavailable  we asked and could not find out
+ *
+ * "unavailable" used to be folded into "new", and that was a data loss bug. If the API
+ * was restarting when this page opened, the request failed, the form decided there was
+ * no profile, and showed empty fields under the heading "Finish your profile". Filling
+ * them in and saving then wrote those blanks over a real bio and a real tech stack,
+ * through a sync that writes every column it is given.
+ *
+ * From the outside it looked exactly like the site had forgotten the profile. It had
+ * not: the row was intact until the save flattened it.
+ *
+ * The decision itself lives in lib/profileLoad.ts so it can be tested without rendering
+ * this page. See tests/lib/profileLoad.test.ts.
+ */
+
 export default function ProfileSetupPage() {
   const router = useRouter();
-  const { getToken } = useAuth();
+  const { getToken, isLoaded: authLoaded } = useAuth();
   const { user, isLoaded } = useUser();
 
   const [username, setUsername] = useState("");
@@ -77,24 +102,33 @@ export default function ProfileSetupPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Null until we know: undecided, rather than "has no profile".
-  const [existing, setExisting] = useState<boolean | null>(null);
+  const [loadState, setLoadState] = useState<ProfileLoadState>("loading");
+  const [reloadKey, setReloadKey] = useState(0);
 
   /*
    * Load the profile this person already has, if any, and put it in the form.
    *
-   * A 404 here is the normal first time case, not a failure: the Clerk account exists
-   * but POST /users/sync has never run, so there is no row yet. Anything else is left
-   * to the submit handler to report, because a profile that will not load is not worth
-   * blocking a first time visitor over.
+   * A USER_NOT_FOUND is the normal first time case, not a failure: the Clerk account
+   * exists but POST /users/sync has never run, so there is no row yet. Every other
+   * failure means we do not know, which is a different answer and is treated as one.
    */
   useEffect(() => {
+    // Clerk hands back getToken before it has a session, and calling it too early
+    // returns null. This effect used to give up silently at that point and never run
+    // again, because getToken never changes, so the form stayed blank for somebody who
+    // had a perfectly good profile sitting in the database.
+    if (!authLoaded) return;
+
     let cancelled = false;
 
     async function loadExisting() {
       try {
         const token = await getToken();
-        if (!token) return;
+
+        if (!token) {
+          if (!cancelled) setLoadState("unavailable");
+          return;
+        }
 
         const { user: mine } = await getMe(token);
         if (cancelled) return;
@@ -103,9 +137,13 @@ export default function ProfileSetupPage() {
         setBio(mine.bio ?? "");
         setGithubUrl(mine.githubUrl ?? "");
         setTechStack(mine.techStack ?? []);
-        setExisting(true);
-      } catch {
-        if (!cancelled) setExisting(false);
+        setLoadState("existing");
+      } catch (caught) {
+        if (cancelled) return;
+
+        // The only failure that means "there is no profile" is the API saying so. A
+        // server that is down, restarting, or answering 500 means we do not know.
+        setLoadState(classifyProfileLoadFailure(caught));
       }
     }
 
@@ -115,7 +153,13 @@ export default function ProfileSetupPage() {
     return () => {
       cancelled = true;
     };
-  }, [getToken]);
+  }, [authLoaded, getToken, reloadKey]);
+
+  /** Ask again, for the retry button on the "could not load" banner. */
+  const retryLoad = useCallback(() => {
+    setLoadState("loading");
+    setReloadKey((key) => key + 1);
+  }, []);
 
   /** Already on the list? Compared without case, so "node" cannot be added twice. */
   function alreadyPicked(tech: string): boolean {
@@ -139,6 +183,14 @@ export default function ProfileSetupPage() {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+
+    // Refuse to save what we could not first read. This is the guard that stops a blank
+    // form being written over a real profile during an API restart.
+    if (!canSaveProfile(loadState)) {
+      setError("Your profile has not loaded yet, so saving now could overwrite it. Try again.");
+      return;
+    }
+
     setError(null);
     setSaving(true);
 
@@ -151,20 +203,31 @@ export default function ProfileSetupPage() {
         return;
       }
 
-      await syncProfile(
-        {
-          username: username.trim(),
-          bio: bio.trim() || undefined,
-          techStack,
-          githubUrl: githubUrl.trim() || undefined,
-        },
-        token
-      );
+      const values = {
+        username: username.trim(),
+        bio: bio.trim() || undefined,
+        techStack,
+        githubUrl: githubUrl.trim() || undefined,
+      };
+
+      /*
+       * Two different endpoints, and the difference matters.
+       *
+       * sync creates the row and writes every column, which is right when there is no
+       * row yet and nothing to lose. Once a profile exists it is an edit, so it goes
+       * through PATCH /users/me, which only touches the fields it is sent and cannot
+       * create anything.
+       */
+      if (loadState === "existing") {
+        await updateProfile(values, token);
+      } else {
+        await syncProfile(values, token);
+      }
 
       // Straight to the profile this form just wrote, so the change is visible rather
       // than something you have to go and check. refresh() makes the server render it
       // again rather than serving what it had cached before the save.
-      router.push(`/profile/${username.trim()}`);
+      router.push(`/profile/${values.username}`);
       router.refresh();
     } catch (caught) {
       setError(
@@ -202,6 +265,26 @@ export default function ProfileSetupPage() {
   }
 
   const full = techStack.length >= MAX_TECH;
+  const editing = loadState === "existing";
+
+  // Nothing may be typed or saved until we know what is already there.
+  const locked = loadState === "loading" || loadState === "unavailable";
+
+  const heading =
+    loadState === "loading"
+      ? "Loading your profile"
+      : editing
+        ? "Edit your profile"
+        : "Finish your profile";
+
+  const subheading =
+    loadState === "loading"
+      ? "Fetching what you already have, so nothing gets written over."
+      : loadState === "unavailable"
+        ? "We could not read your existing profile, so this form is locked until we can."
+        : editing
+          ? "Change anything here and save. Your Karma and everything you have posted stay exactly as they are."
+          : "This is what other developers see, and the technologies you pick are what the feed sorts around.";
 
   return (
     <PageShell>
@@ -209,17 +292,18 @@ export default function ProfileSetupPage() {
 
       <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[21px] font-semibold tracking-tight sm:text-[24px]">
-            {existing ? "Edit your profile" : "Finish your profile"}
+          <h1 className="flex items-center gap-2 text-[21px] font-semibold tracking-tight sm:text-[24px]">
+            {loadState === "loading" ? (
+              <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
+            ) : null}
+            {heading}
           </h1>
           <p className="mt-1 max-w-[60ch] text-[13.5px] leading-relaxed text-muted-foreground">
-            {existing
-              ? "Change anything here and save. Your Karma and everything you have posted stay exactly as they are."
-              : "This is what other developers see, and the technologies you pick are what the feed sorts around."}
+            {subheading}
           </p>
         </div>
 
-        {existing ? (
+        {editing ? (
           <Link
             href={`/profile/${username}`}
             className="text-[13px] text-muted-foreground transition-colors hover:text-primary"
@@ -229,9 +313,44 @@ export default function ProfileSetupPage() {
         ) : null}
       </div>
 
+      {/*
+        The banner that replaces the old data loss bug.
+        Before this, a failure to read the existing profile was silently treated as "you
+        have no profile": the form showed empty fields, and saving them overwrote a real
+        bio and tech stack. Now it says so, and the form will not save.
+      */}
+      {loadState === "unavailable" ? (
+        <div
+          role="alert"
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-destructive bg-destructive/5 p-4"
+        >
+          <div className="flex items-start gap-2">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+            <div>
+              <p className="text-[13px] font-semibold text-destructive">
+                Could not load your profile
+              </p>
+              <p className="mt-0.5 max-w-[70ch] text-[12.5px] leading-relaxed text-muted-foreground">
+                The API did not answer, so we do not know what you already have. Nothing
+                has been lost and nothing will be saved until it loads, because saving a
+                blank form now would write over your real details.
+              </p>
+            </div>
+          </div>
+
+          <Button type="button" variant="outline" onClick={retryLoad} className="shrink-0">
+            <RotateCw className="size-3.5" aria-hidden />
+            Try again
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          <fieldset className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
+          <fieldset
+            disabled={locked}
+            className="rounded-[var(--radius)] border bg-card p-5 sm:p-6 disabled:opacity-60"
+          >
             <legend className="px-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               About you
             </legend>
@@ -292,7 +411,10 @@ export default function ProfileSetupPage() {
             </div>
           </fieldset>
 
-          <fieldset className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
+          <fieldset
+            disabled={locked}
+            className="rounded-[var(--radius)] border bg-card p-5 sm:p-6 disabled:opacity-60"
+          >
             <legend className="px-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               What you work with
             </legend>
@@ -412,13 +534,19 @@ export default function ProfileSetupPage() {
           <div className="flex items-center gap-3">
             <Button
               type="submit"
-              disabled={saving || username.trim().length < 3}
+              disabled={locked || saving || username.trim().length < 3}
               className="w-full sm:w-auto"
             >
-              {saving ? "Saving" : existing ? "Save changes" : "Save and see my profile"}
+              {saving ? "Saving" : editing ? "Save changes" : "Save and see my profile"}
             </Button>
 
-            {username.trim().length < 3 ? (
+            {locked ? (
+              <span className="text-[12px] text-muted-foreground">
+                {loadState === "loading"
+                  ? "Waiting for your existing profile."
+                  : "Saving is off until your profile loads."}
+              </span>
+            ) : username.trim().length < 3 ? (
               <span className="text-[12px] text-muted-foreground">
                 A username of at least 3 characters is needed.
               </span>
