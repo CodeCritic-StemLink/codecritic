@@ -1,3 +1,4 @@
+import { UserLink } from "@/components/UserLink";
 import type { SubmissionReview } from "@/services/submission.service";
 
 // One review, shown on the submission detail page: strengths, improvements, optional
@@ -26,7 +27,7 @@ export function SubmissionReviewCard({ review }: Props) {
     <article className="rounded-[var(--radius)] border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-[12px]">
-          <span className="text-foreground">@{review.reviewer.username}</span>
+          <UserLink username={review.reviewer.username} className="font-normal" />
           <span className="text-muted-foreground"> · {review.reviewer.karma} Karma</span>
         </p>
         <p className="font-mono text-[11.5px] text-muted-foreground">

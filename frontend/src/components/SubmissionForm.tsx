@@ -9,13 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { PageShell } from "@/components/PageShell";
+import { BackLink } from "@/components/BackLink";
 import { createSubmission } from "@/services/submission.service";
 import { ApiError } from "@/api/api";
 
 // The post-a-request form.
 //
 // Mirrors the shape of profile/setup/page.tsx: a client component holding what you
-// typed, which calls one service function on submit. Every rule here is a courtesy —
+// typed, which calls one service function on submit. Every rule here is a courtesy:
 // the real validation is server side in POST /submissions, and a mentor calling the
 // API directly with none of this will hit the same errors.
 //
@@ -114,72 +116,94 @@ export function SubmissionForm() {
   }
 
   if (!isLoaded) {
-    return <div className="mx-auto w-full max-w-xl px-6 py-16" />;
+    return <PageShell />;
   }
 
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-xl px-6 py-16">
-        <h1 className="text-xl font-semibold">Sign in first</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You need an account before you can post a review request.
-        </p>
-      </div>
+      <PageShell>
+        <BackLink />
+        <div className="mx-auto mt-16 max-w-md text-center">
+          <h1 className="text-xl font-semibold">Sign in first</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You need an account before you can post a review request.
+          </p>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-6 py-10">
-      <h1 className="text-[21px] font-semibold tracking-tight">Post a review request</h1>
-      <p className="mt-1 text-[13.5px] text-muted-foreground">
+    <PageShell>
+      <BackLink />
+
+      <h1 className="mt-4 text-[21px] font-semibold tracking-tight sm:text-[24px]">
+        Post a review request
+      </h1>
+      <p className="mt-1 max-w-[60ch] text-[13.5px] text-muted-foreground">
         Tell reviewers what you built and what you want them to look at.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 rounded-[var(--radius)] border bg-card p-5">
-        <div className="mb-4">
-          <label htmlFor="title" className="mb-1.5 block text-[12.5px] font-semibold">
-            Title
-          </label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="React dashboard that re-renders too often"
-            required
-            maxLength={120}
-          />
+      {/*
+        Two columns from lg up: what you are asking about on the left, how it should be
+        reviewed on the right. It was one narrow column, which on a wide screen meant a
+        strip of form in the middle of an empty page and the submit button a long scroll
+        below the title.
+      */}
+      <form
+        onSubmit={handleSubmit}
+        className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start"
+      >
+        <div className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
+          <div className="mb-4">
+            <label htmlFor="title" className="mb-1.5 block text-[12.5px] font-semibold">
+              Title
+            </label>
+            <Input
+              id="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="React dashboard that re-renders too often"
+              required
+              maxLength={120}
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="description" className="mb-1.5 block text-[12.5px] font-semibold">
+              Description
+            </label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What does it do, and what feedback are you after?"
+              required
+              maxLength={5000}
+              rows={10}
+            />
+            <p className="mt-1 text-[12px] text-muted-foreground">
+              The more specific the question, the more useful the answers.
+            </p>
+          </div>
+
+          <div>
+            <label htmlFor="repoUrl" className="mb-1.5 block text-[12.5px] font-semibold">
+              Repository URL
+            </label>
+            <Input
+              id="repoUrl"
+              type="url"
+              value={repoUrl}
+              onChange={(e) => setRepoUrl(e.target.value)}
+              placeholder="https://github.com/you/project"
+              required
+            />
+          </div>
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="description" className="mb-1.5 block text-[12.5px] font-semibold">
-            Description
-          </label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="What does it do, and what feedback are you after?"
-            required
-            maxLength={5000}
-            rows={5}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="repoUrl" className="mb-1.5 block text-[12.5px] font-semibold">
-            Repository URL
-          </label>
-          <Input
-            id="repoUrl"
-            type="url"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="https://github.com/you/project"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
+        <div className="flex flex-col gap-5">
+        <div className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
           <label htmlFor="tag-draft" className="mb-1.5 block text-[12.5px] font-semibold">
             Tags{" "}
             <span className="font-normal text-muted-foreground">
@@ -231,7 +255,7 @@ export function SubmissionForm() {
           </p>
         </div>
 
-        <div className="mb-5">
+        <div className="rounded-[var(--radius)] border bg-card p-5 sm:p-6">
           <label htmlFor="criterion-draft" className="mb-1.5 block text-[12.5px] font-semibold">
             What should reviewers rate?{" "}
             <span className="font-normal text-muted-foreground">
@@ -294,7 +318,7 @@ export function SubmissionForm() {
         </div>
 
         {error ? (
-          <p className="mb-4 rounded-md border border-destructive px-3 py-2 text-[13px] text-destructive">
+          <p className="rounded-md border border-destructive px-3 py-2 text-[13px] text-destructive">
             {error}
           </p>
         ) : null}
@@ -302,7 +326,8 @@ export function SubmissionForm() {
         <Button type="submit" disabled={!canSubmit} className="w-full">
           {submitting ? "Posting" : "Post request"}
         </Button>
+        </div>
       </form>
-    </div>
+    </PageShell>
   );
 }
