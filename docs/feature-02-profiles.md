@@ -315,6 +315,16 @@ query for the tag counts, no fifth for the average. The counting is a pure funct
 came from their own query, run a moment later, a review written in between would make
 "reviews given" say 4 while the tags described 5.
 
+**Who is reading the page is asked once.** The navbar needs the viewer for the karma
+chip and this page needs it to decide whether to draw an Edit button. Both used to call
+`GET /users/me` themselves, and the navbar renders on every route, so that was two round
+trips for the same row on every navigation. `services/viewer.ts` wraps it in React's
+`cache`, which deduplicates within one render pass and holds nothing between requests,
+so karma is still correct the instant a review is written.
+
+The profile and the viewer are also fetched **together** rather than one after the other,
+since neither depends on the other.
+
 **Why the counting is a separate file.** `insights.service.ts` imports nothing that
 touches a database, so it is directly testable:
 

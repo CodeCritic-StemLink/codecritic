@@ -410,6 +410,28 @@ to read the existing profile as "this person has no profile", so if the API was 
 page opened, the form appeared blank and saving it wrote blanks over a real bio and tech stack. The
 form now refuses to save anything it could not first read. See `docs/feature-02-profiles.md`.
 
+**Three states, not two.** For each field:
+
+| What the body carries | What happens |
+| --- | --- |
+| The key is absent | Whatever is stored is left alone |
+| The key is `null`, or `""` for text | The field is cleared |
+| The key has a value | The field is set to it |
+
+Both halves of that were broken and both are fixed:
+
+- `techStack` carried a `.default([])`, and `.partial()` makes a key optional **without removing its
+  default**. So `PATCH {"bio":"hi"}` parsed to `{bio:"hi", techStack:[]}` and the update wrote the
+  empty array, erasing the caller's whole tech stack. The edit schema is now built from the field
+  rules directly, so no default can leak into it. Creating a profile still defaults the stack, where
+  there is nothing to lose.
+- Nothing could be **cleared**. A blank box became `undefined`, `JSON.stringify` drops undefined
+  keys, so the field never arrived and the old value stayed. `bio` and `githubUrl` accept `null` now,
+  and the form sends `null` rather than `undefined`.
+
+Both are covered by tests in `backend/tests/models/user.schema.test.ts`, and were verified against
+the real database before and after.
+
 There is deliberately no `PATCH /users/:id`. The route has no id in it at all, so there is no way
 to aim it at somebody else's row. That is the simplest possible answer to the spec's requirement
 that a user must not be able to edit another user's profile.
