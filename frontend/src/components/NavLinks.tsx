@@ -53,19 +53,46 @@ export function NavLinks({ username, className = "" }: Props) {
       : []),
   ];
 
+  /*
+   * Share the row only when there is something to share it with.
+   *
+   * Signed in there are two links, and splitting the row between them fills it and
+   * reads as a tab bar. Signed out there is only "Browse", and stretching one chip
+   * across the whole width of a phone makes it look like a button somebody pressed by
+   * accident, so it keeps its natural size.
+   */
+  const shareTheRow = links.length > 1;
+
   return (
     <nav aria-label="Main" className={className}>
-      <ul className="flex items-center gap-1">
+      {/*
+        On a phone the links have a row to themselves, so they share it equally and each
+        one fills its share. They used to be their natural width and left aligned, which
+        left the right half of that row as blank white and made the whole bar look like
+        something had failed to load.
+
+        Sharing the width rather than hard coding one is what makes this fit any phone:
+        two links at 320px get 144px each, at 430px they get 199px each, and a signed
+        out visitor with only "Browse" gets the whole row. Nothing has to be measured.
+
+        From sm up they sit beside the brand at their natural width, where stretching
+        them across a desktop would be absurd.
+      */}
+      <ul className="flex w-full items-center gap-1.5 sm:w-auto sm:gap-1">
         {links.map(({ label, href, Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname === href;
 
           return (
-            <li key={label}>
+            <li
+              key={label}
+              className={shareTheRow ? "min-w-0 flex-1 sm:flex-none" : "min-w-0"}
+            >
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={[
-                  "flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-[13.5px] transition-colors",
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-lg py-1.5 text-[13.5px] transition-colors",
+                  shareTheRow ? "justify-center px-2 sm:justify-start sm:px-2.5" : "px-2.5",
                   active
                     ? "bg-accent font-medium text-primary"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",

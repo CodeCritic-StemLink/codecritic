@@ -50,7 +50,7 @@ export async function Nav() {
         which is what stranded the links in the dead centre of a wide screen with a gulf
         on either side.
       */}
-      <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:flex-nowrap sm:gap-x-4 sm:px-6 sm:py-3 lg:px-8 2xl:px-12">
+      <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-2 sm:flex-nowrap sm:gap-x-4 sm:px-6 sm:py-3 lg:px-8 2xl:px-12">
         <Link
           href="/"
           className="order-1 flex shrink-0 items-center gap-2 font-semibold tracking-tight"
@@ -64,7 +64,7 @@ export async function Nav() {
 
         <NavLinks
           username={me?.username}
-          className="order-3 -mx-1 w-full overflow-x-auto border-t pt-1.5 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:border-t-0 sm:pt-0"
+          className="order-3 w-full border-t pt-1.5 sm:order-2 sm:w-auto sm:border-t-0 sm:pt-0"
         />
 
         <div className="order-2 ml-auto flex min-w-0 items-center gap-2 sm:order-3 sm:gap-3">
