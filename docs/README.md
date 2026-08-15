@@ -1,34 +1,67 @@
-# Design documents
+# CodeCritic design documents
 
-This folder holds the design work for CodeCritic. It is a **graded deliverable**, not an
-afterthought. The specification asks for design documents "produced before implementation and
-refined as you build", and they are submitted alongside the repository link.
+CodeCritic is a peer code review platform. You post a link to something you have built,
+say what you want looked at, and other developers write structured feedback and score it
+against criteria you chose yourself. Writing a review earns you Karma.
 
-## What lives here
+These documents describe how it is designed and why. They were written alongside the
+build and kept in step with it, so what is here is what the code does.
 
-| File | What it covers | Status |
-| --- | --- | --- |
-| `database-design.md` | The five tables, their columns, their relationships, and the design decisions we reasoned through (Karma as a column, status as a derived value, Rating as its own table). Includes the ER diagram. | Version 1, 2026-08-11 |
-| `api-design.md` | Every endpoint the front end can call, what it expects, what it returns, and which server side validation rules apply to each one. Includes the Feature 01 ranking formula and the plan for proving validation works. | Version 1, 2026-08-11 |
-| `team-guide.md` | **Start here.** The A to Z guide for the whole team: what we are building, how we meet the SRS, how to get set up from nothing, how we use branches and pull requests, who owns what, the plan to the deadline, how deployment works, and what every member must be able to explain. | 2026-08-12 |
-| `architecture.md` | **Read before writing any file.** The folder structure for both halves, what each layer may import, how one request travels through them, the error hierarchy, and the decisions we locked where the SRS and the class notes disagreed. | 2026-08-12 |
-| `deployment.md` | Where everything runs, why we chose Neon, Render and Vercel, the exact settings for each, the environment variables, how CORS works, the keepalive robot, and what to do when a deploy breaks. | 2026-08-13 |
-| `authentication.md` | How signing up, signing in and signing out work: what Clerk owns, what we built, the two records and the `clerkId` joining them, every situation we could think of, and the questions each of us must be able to answer. | 2026-08-14 |
-| `aaysha-submission-feature.md` | The full specification for posting a review request, split into back end, unit tests and form. Written because `POST /submissions` is the last unstarted piece and the whole product depends on it. | 2026-08-13 |
-| `test-plan.md` | One section per person. The exact command, the expected result and the real result for every rule on their own feature. This is the evidence we show at assessment. | Started 2026-08-12 |
+---
 
-## Why these come before the code
+## Where to start
 
-Four people are building one system in one week. If the database shape is not agreed first,
-everybody builds against a different idea of it and the pieces do not fit together at the end.
+| Document | What it covers |
+| --- | --- |
+| [database-design.md](database-design.md) | The five tables, what each one holds, and the decisions behind them |
+| [er-diagram.svg](er-diagram.svg) | The same thing as a picture |
+| [api-design.md](api-design.md) | Every endpoint, every field, every validation rule and error code |
+| [feature-01-ranking.md](feature-01-ranking.md) | The personalised feed: how the ordering is calculated and why |
+| [feature-02-profiles.md](feature-02-profiles.md) | Public profiles, Karma, and the insights derived from review history |
+| [authentication.md](authentication.md) | Signing up, signing in, sessions, and how a login becomes a user row |
 
-The API design does the same job for the boundary between the front end and the back end.
-Once it is agreed, the front end can be built against endpoints that do not exist yet, and the
-back end can be built without waiting for any screens.
+Reading them in that order works: the tables, then the endpoints that move data in and
+out of them, then the two features built on top.
 
-## Rules for this folder
+---
 
-- Update these documents when the design changes. A design document that no longer matches the
-  code is worse than none, because it teaches the wrong thing to whoever reads it.
-- Every figure and every decision in here must be explainable by **any** member of the group at
-  final assessment, including the parts they did not write.
+## The shape of the system
+
+```
+   browser                    Express API                 PostgreSQL
+   ───────                    ───────────                 ──────────
+   Next.js pages   ────────►  routes                          
+   rendered on              controllers                       
+   the server               services      ◄──── the rules live here
+                            repositories  ────────►  tables
+```
+
+Two applications in one repository. The front end is Next.js and renders on the server,
+so a visitor receives finished HTML. It never touches the database: everything goes
+through the API, which owns every rule about what is allowed.
+
+The layering matters more than it looks. A rule written in a React form is a suggestion,
+because anyone can call the API directly and skip the form entirely. So **every rule is
+enforced in the API**, and the front end repeats the ones worth repeating only so people
+find out while they are typing rather than after pressing a button.
+
+---
+
+## Decisions worth knowing before you read further
+
+**Karma is a column, not a table.** It only ever moves by +2, only ever inside the
+transaction that writes a review, and never goes down. The Review table already is the
+log, so a second one could only disagree with the first.
+
+**Status is not stored.** Pending and reviewed are derived by counting a submission's
+reviews. A stored flag can go stale; a count cannot disagree with itself.
+
+**Criteria are invented per submission.** Whoever posts decides what they want scored, so
+this cannot be a fixed set of columns. That is why Criterion and Rating are separate
+tables rather than fields on Review.
+
+**The ranking runs on the server.** The browser never receives the scoring code, only the
+finished order. See [feature-01-ranking.md](feature-01-ranking.md).
+
+**Nothing is ever deleted.** There is no delete, no moderation and no rejection anywhere
+in the product.

@@ -11,11 +11,24 @@ export type User = {
   karma: number;
 };
 
+/**
+ * What the profile form sends.
+ *
+ * bio and githubUrl are `string | null`, not `string | undefined`, and the difference
+ * decides whether an edit can empty a field:
+ *
+ *   null       clear it
+ *   absent     leave whatever is stored alone
+ *
+ * They used to be sent as undefined when the box was blank. JSON.stringify drops
+ * undefined keys, so the field never reached the API, and the update left the old
+ * value in place. You could change a bio but never remove one.
+ */
 export type ProfileInput = {
   username: string;
-  bio?: string;
+  bio?: string | null;
   techStack: string[];
-  githubUrl?: string;
+  githubUrl?: string | null;
 };
 
 /**
@@ -35,10 +48,34 @@ export function syncProfile(input: ProfileInput, token: string): Promise<{ user:
 }
 
 /**
+ * Edits the profile you already have.
+ *
+ * Different from syncProfile in the one way that matters: this is a partial update, so
+ * a field left out is left alone, while sync writes every field it is given and nulls
+ * anything it is not.
+ *
+ * That is why the edit form uses this one. Sync is for the very first save, when there
+ * is no row yet and nothing to lose. Once a profile exists, a save that could not first
+ * read what was there must not be able to flatten it.
+ *
+ * There is no id in the path on purpose. The row updated is whichever one the caller's
+ * own token resolves to, so this cannot be aimed at somebody else's profile.
+ */
+export function updateProfile(input: Partial<ProfileInput>, token: string): Promise<{ user: User }> {
+  return apiFetch<{ user: User }>("/users/me", {
+    method: "PATCH",
+    token,
+    body: input,
+  });
+}
+
+/**
  * Your own row. Used by the navbar for the karma chip and the "who am I" links.
  *
  * Throws `USER_NOT_FOUND` when signed in to Clerk but `POST /users/sync` has never
  * run, which callers should treat as "not finished setting up" rather than an error.
+ * Every other failure means we do not know whether a profile exists, which is a
+ * different thing and must not be treated as "there is none".
  */
 export function getMe(token: string): Promise<{ user: User }> {
   return apiFetch<{ user: User }>("/users/me", { token });

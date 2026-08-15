@@ -3,7 +3,6 @@
 How signing up, signing in and signing out work in CodeCritic, what Clerk does for us,
 what we built, and what happens in every situation we could think of.
 
-Written 2026-08-14.
 
 ---
 
@@ -34,8 +33,8 @@ There are two systems and they each own different things.
 | Bot protection | |
 
 **We never see a password.** Not in the database, not in a log, not in transit through
-our code. That is the single biggest reason the spec chose a hosted authentication
-service, and it is worth saying plainly at assessment.
+our code. That is the single biggest reason to use a hosted authentication service
+rather than writing one.
 
 ### What that means practically
 
@@ -100,7 +99,7 @@ Three reasons:
    or sent in an email.
 2. **Redirect after sign up.** Sending a new account to profile setup needs a page to
    attach that rule to.
-3. **The spec expects our routes**, and a popup that says "Secured by Clerk" as its
+3. **A real page is a real address**, and a popup that says "Secured by Clerk" as its
    only heading looks like somebody else's product.
 
 ---
@@ -160,7 +159,7 @@ Same, minus the verification step: Google and GitHub have already verified the e
 ```
 
 **Nothing is deleted.** Not your row, not your Karma, not your submissions or reviews.
-There is no delete of a User anywhere in the backend, which also satisfies the SRS
+There is no delete of a User anywhere in the backend, which also matches the
 rule that nothing is ever removed.
 
 The confirm exists for one reason: writing a review is the longest piece of typing on
@@ -181,8 +180,8 @@ used to lose the lot, because nothing is saved until submit.
 | Forgot the password | "Forgot password?" on the password screen, Clerk emails a reset | Yes, Clerk's, not ours |
 | Close the browser and come back tomorrow | Still signed in | Yes. Session is 7 days sliding |
 | Two weeks away, no visits | Signed out, session expired | Yes |
-| Signed out visitor opens the feed | Works, newest first | Required by the SRS |
-| Signed out visitor opens any profile | Works, profiles are public | Required by the SRS |
+| Signed out visitor opens the feed | Works, newest first | The feed is public |
+| Signed out visitor opens any profile | Works, profiles are public | Reputation is public |
 | Signed out visitor opens `/submissions/new` | Redirected to `/sign-in?redirect_url=/submissions/new`, and after signing in lands back on the form | Yes |
 | Signed out visitor calls `POST /submissions` directly | 401 `UNAUTHENTICATED` | Yes. This is the real guard; the page redirect is only convenience |
 | Signed in to Clerk but abandoned profile setup | Feed shows a "Finish your profile" banner, navigation bar renders without the Karma chip | Yes, and the forced redirect makes it rare |
@@ -258,7 +257,7 @@ for a moment is the smaller problem.** Colours are correct on every normal page 
 ### The Clerk instance is in development mode
 
 That is the orange badge at the bottom of the form. Development instances have usage
-limits and use Clerk's shared social credentials. Fine for the demo. Going to real
+limits and use Clerk's shared social credentials. Fine at this size. Going to real
 users means a production instance and our own GitHub OAuth app, which is what the
 "Use custom credentials" switch is for.
 

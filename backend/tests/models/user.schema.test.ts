@@ -224,3 +224,80 @@ test("each field maps to the code docs/api-design.md promises", () => {
     githubUrl: "INVALID_GITHUB_URL",
   });
 });
+
+// --------------------------------------------------------------------------
+// Partial updates must stay partial
+//
+// These exist for a bug that reached the merged branch. techStack carried a
+// `.default([])`, and `.partial()` makes a key optional without removing its default,
+// so `parse({ bio: "x" })` came back as `{ bio: "x", techStack: [] }`. The update
+// service writes any key that is not undefined, so a PATCH carrying nothing but a bio
+// silently erased the caller's whole tech stack.
+//
+// The front end never triggered it, because the edit form always sends all four
+// fields. The SRS says mentors will call the API directly, and there it was one
+// request away.
+// --------------------------------------------------------------------------
+
+test("a patch with only a bio does not smuggle in an empty tech stack", () => {
+  const result = updateProfileSchema.parse({ bio: "Just the bio." });
+
+  expect(result).toEqual({ bio: "Just the bio." });
+  expect("techStack" in result).toBe(false);
+});
+
+test("an empty patch stays empty, so it can change nothing", () => {
+  expect(updateProfileSchema.parse({})).toEqual({});
+});
+
+test("a patch with only a username touches nothing else", () => {
+  const result = updateProfileSchema.parse({ username: "osini_dev" });
+
+  expect(Object.keys(result)).toEqual(["username"]);
+});
+
+test("creating a profile still defaults the tech stack, where there is nothing to lose", () => {
+  const result = profileSchema.parse({ username: "osini_dev" });
+
+  expect(result.techStack).toEqual([]);
+});
+
+test("a tech stack sent on a patch is still honoured", () => {
+  expect(updateProfileSchema.parse({ techStack: ["Node"] })).toEqual({ techStack: ["Node"] });
+});
+
+// --------------------------------------------------------------------------
+// Clearing a field, which was not possible at all before
+//
+// undefined means "leave it alone" and null means "clear it". Without the second, the
+// form could change a bio but never remove one: a blank box became undefined, JSON
+// dropped the key, and the update skipped the field.
+// --------------------------------------------------------------------------
+
+test("null is accepted for a bio, so an existing one can be cleared", () => {
+  const result = updateProfileSchema.parse({ bio: null });
+
+  expect(result).toEqual({ bio: null });
+  expect("bio" in result).toBe(true);
+});
+
+test("null is accepted for a github link", () => {
+  expect(updateProfileSchema.parse({ githubUrl: null })).toEqual({ githubUrl: null });
+});
+
+test("null and absent are different things", () => {
+  const cleared = updateProfileSchema.parse({ bio: null });
+  const untouched = updateProfileSchema.parse({});
+
+  expect("bio" in cleared).toBe(true);
+  expect("bio" in untouched).toBe(false);
+});
+
+test("a null tech stack is refused, because an empty list already says that", () => {
+  expect(updateProfileSchema.safeParse({ techStack: null }).success).toBe(false);
+});
+
+test("null does not get past the length rules for a real value", () => {
+  expect(updateProfileSchema.safeParse({ bio: "x".repeat(501) }).success).toBe(false);
+  expect(updateProfileSchema.safeParse({ githubUrl: "not a url" }).success).toBe(false);
+});

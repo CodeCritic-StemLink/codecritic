@@ -7,11 +7,15 @@ import { useAuth } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { createReview } from "@/services/review.service";
 import { ApiError } from "@/api/api";
+import { isSafeUrl } from "@/lib/url";
 import type { Criterion } from "@/services/submission.service";
 
 // The review form. One score control per criterion, defined by whoever posted the
-// submission — this component has no idea what the criteria will be ahead of time,
+// submission, and this component has no idea what the criteria will be ahead of time,
 // same as the SRS asks for.
+
+/** The same ceiling the API enforces in models/review.schema.ts. */
+const MAX_RESOURCES = 5;
 
 type Props = {
   submissionId: string;
@@ -48,17 +52,12 @@ export function ReviewForm({ submissionId, criteria }: Props) {
         return;
       }
 
-      const resources = resourcesText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean);
-
       await createReview(
         submissionId,
         {
           strengths: strengths.trim(),
           improvements: improvements.trim(),
-          resources,
+          resources: resourceLines,
           ratings: criteria.map((criterion) => ({
             criterionId: criterion.id,
             score: scores[criterion.id],
@@ -81,7 +80,27 @@ export function ReviewForm({ submissionId, criteria }: Props) {
     }
   }
 
-  const canSubmit = strengths.trim().length > 0 && improvements.trim().length > 0 && !submitting;
+  /*
+   * Resources are one link per line, so any of them can be wrong on its own. The bad
+   * ones are named rather than the whole box turning red, because "one of these five is
+   * wrong" is not useful when you are looking at five of them.
+   *
+   * The API enforces the same rule and answers INVALID_RESOURCES, but only after you
+   * have written the whole review and pressed the button. See lib/url.ts.
+   */
+  const resourceLines = resourcesText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const badResources = resourceLines.filter((line) => !isSafeUrl(line));
+
+  const canSubmit =
+    strengths.trim().length > 0 &&
+    improvements.trim().length > 0 &&
+    badResources.length === 0 &&
+    resourceLines.length <= MAX_RESOURCES &&
+    !submitting;
 
   return (
     <form onSubmit={handleSubmit} className="mt-4 w-full rounded-[var(--radius)] border bg-card p-4 sm:p-5">
@@ -126,8 +145,24 @@ export function ReviewForm({ submissionId, criteria }: Props) {
           onChange={(e) => setResourcesText(e.target.value)}
           rows={2}
           placeholder="https://example.com/guide"
-          className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-[13.5px] outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          aria-invalid={badResources.length > 0 ? true : undefined}
+          aria-describedby="resources-hint"
+          className={[
+            "w-full rounded-lg border bg-transparent px-2.5 py-2 text-[13.5px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            badResources.length > 0
+              ? "border-destructive focus-visible:border-destructive"
+              : "border-input focus-visible:border-ring",
+          ].join(" ")}
         />
+        {badResources.length > 0 ? (
+          <p id="resources-hint" className="mt-1 text-[12px] text-destructive">
+            Not a link: {badResources.join(", ")}. Each line must start with https://
+          </p>
+        ) : resourceLines.length > MAX_RESOURCES ? (
+          <p id="resources-hint" className="mt-1 text-[12px] text-destructive">
+            At most {MAX_RESOURCES} links. Remove {resourceLines.length - MAX_RESOURCES}.
+          </p>
+        ) : null}
       </div>
 
       <div className="mb-5 flex flex-col gap-3">

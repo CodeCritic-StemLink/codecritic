@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CircleCheck, CircleDashed, Layers, Tag, X } from "lucide-react";
 
 import { feedUrl } from "@/lib/feedUrl";
-import { popularTags } from "@/lib/tags";
+import { popularTags, sameTag } from "@/lib/tags";
 import type { FeedParams } from "@/lib/feedUrl";
 import type { FeedItem } from "@/services/submission.service";
 
@@ -49,10 +49,14 @@ export function FeedFilters({ submissions, params }: Props) {
 
       {/*
         Horizontally scrollable chips below xl, a stacked list at xl and up.
-        -mx-6 px-6 lets the scrolling row bleed to the screen edges on a phone so the
-        last chip is not clipped by the page padding.
+
+        The negative margin lets the scrolling row bleed to the screen edges on a phone
+        so the last chip is not clipped by the page padding. It has to be exactly the
+        padding PageShell applies at that width, and it was not: -mx-6 against the
+        shell's px-4 pulled 8px past the edge on each side and the whole page could be
+        scrolled sideways.
       */}
-      <ul className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-1 xl:mx-0 xl:flex-col xl:gap-0.5 xl:overflow-visible xl:px-0 xl:pb-0">
+      <ul className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 xl:mx-0 xl:flex-col xl:gap-0.5 xl:overflow-visible xl:px-0 xl:pb-0">
         {states.map(({ label, value, Icon }) => {
           const active = params.status === value;
 
@@ -85,7 +89,8 @@ export function FeedFilters({ submissions, params }: Props) {
 
           <ul className="flex flex-col gap-0.5">
             {tags.map(({ tag, count }) => {
-              const active = params.tag === tag;
+              // Compared without case, so arriving on ?tag=node still lights up "Node".
+              const active = sameTag(params.tag, tag);
 
               return (
                 <li key={tag}>

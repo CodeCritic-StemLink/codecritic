@@ -192,6 +192,184 @@ const SUBMISSIONS = [
     tags: ["TypeScript"],
     criteria: ["Readability", "Type Safety"],
   },
+
+  // -------------------------------------------------------------------------
+  // Everything below exists so the feed is longer than one page.
+  //
+  // The page size is 20, so ten submissions meant the pager had nothing to do and
+  // could not be demonstrated or checked. These take the total past 20 and give the
+  // second page enough on it to be worth turning to.
+  //
+  // A few are deliberately tagged in lower case. Tags are typed by hand on the post
+  // form, so "node" and "Node" both really occur, and the sidebar counting them as one
+  // technology is something the demo should be able to show rather than claim.
+  // -------------------------------------------------------------------------
+
+  {
+    key: "form-validation",
+    author: "aaysha_dev",
+    ageHours: 4,
+    title: "Form validation logic duplicated in three places",
+    description:
+      "The same rules live in the React form, in a helper, and again on the server. They have already drifted apart once. Where should the one true copy live?",
+    repoUrl: "https://github.com/aaysha/form-validation",
+    tags: ["react", "TypeScript"],
+    criteria: ["Structure", "Maintainability"],
+  },
+  {
+    key: "auth-middleware",
+    author: "maya_dev",
+    ageHours: 11,
+    title: "Express auth middleware, am I checking the token properly?",
+    description:
+      "I verify the token and attach the user to the request. It works, but I have a nagging feeling there is a case I have not thought about.",
+    repoUrl: "https://github.com/maya/auth-middleware",
+    tags: ["node", "Express"],
+    criteria: ["Security", "Error Handling"],
+  },
+  {
+    key: "tailwind-dark",
+    author: "osini_dev",
+    ageHours: 19,
+    title: "Dark mode that flashes white on every page load",
+    description:
+      "The theme is read from local storage, so the first paint is always the wrong one. I have seen this called a flash of unstyled content but not how to fix it properly.",
+    repoUrl: "https://github.com/osini/tailwind-dark",
+    tags: ["Tailwind", "Next.js"],
+    criteria: ["Correctness", "Performance"],
+  },
+  {
+    key: "prisma-n-plus-one",
+    author: "andrew_builds",
+    ageHours: 33,
+    title: "One page, ninety database queries",
+    description:
+      "Loading a list of orders fires a separate query for each customer. I know this has a name and I know include exists, but I do not understand when it does and does not help.",
+    repoUrl: "https://github.com/andrew/orders-api",
+    tags: ["Prisma", "PostgreSQL"],
+    criteria: ["Query Design", "Performance"],
+  },
+  {
+    key: "zustand-store",
+    author: "aaysha_dev",
+    ageHours: 45,
+    title: "Should every component read from the same Zustand store?",
+    description:
+      "Twelve components subscribe to one store and most re-render when anything at all changes. Is the store wrong or am I selecting from it wrong?",
+    repoUrl: "https://github.com/aaysha/zustand-store",
+    tags: ["React", "TypeScript"],
+    criteria: ["State Management", "Performance"],
+  },
+  {
+    key: "python-scraper",
+    author: "maya_dev",
+    ageHours: 61,
+    title: "Scraper that silently stops after about 200 pages",
+    description:
+      "No error, no crash, it just finishes early. I suspect I am swallowing an exception somewhere but I cannot find where.",
+    repoUrl: "https://github.com/maya/scraper",
+    tags: ["Python"],
+    criteria: ["Error Handling", "Readability"],
+  },
+  {
+    key: "rest-naming",
+    author: "aqeel_codes",
+    ageHours: 80,
+    title: "Are my REST routes named sensibly, honestly?",
+    description:
+      "I have /getUsers, /user/:id/delete and /createNewUser. I suspect all three are wrong and I would rather be told now than after the marking.",
+    repoUrl: "https://github.com/aqeel/rest-naming",
+    tags: ["Express", "node"],
+    criteria: ["API Design", "Consistency"],
+  },
+  {
+    key: "css-grid-layout",
+    author: "osini_dev",
+    ageHours: 96,
+    title: "Layout collapses between 900px and 1100px only",
+    description:
+      "Fine on a phone, fine on a desktop, broken in the narrow band in the middle. I think my breakpoints have a gap but I cannot see it.",
+    repoUrl: "https://github.com/osini/grid-layout",
+    tags: ["Tailwind", "React"],
+    criteria: ["Responsiveness", "Code Quality"],
+  },
+  {
+    key: "jest-mocking",
+    author: "andrew_builds",
+    ageHours: 118,
+    title: "My tests pass but they are testing the mocks",
+    description:
+      "Every dependency is mocked, so the tests never touch my actual logic. How much should be mocked before a test stops meaning anything?",
+    repoUrl: "https://github.com/andrew/jest-mocking",
+    tags: ["TypeScript", "Node"],
+    criteria: ["Test Quality", "Readability"],
+  },
+  {
+    key: "docker-compose",
+    author: "aqeel_codes",
+    ageHours: 155,
+    title: "Postgres container loses its data on every restart",
+    description:
+      "I have a volume declared and I still lose everything. Reasonably sure I have misunderstood what the volume is actually pointing at.",
+    repoUrl: "https://github.com/aqeel/docker-setup",
+    tags: ["PostgreSQL", "Docker"],
+    criteria: ["Correctness", "Documentation"],
+  },
+  {
+    key: "error-boundaries",
+    author: "aaysha_dev",
+    ageHours: 180,
+    title: "One failed fetch takes the whole page down",
+    description:
+      "A single component throwing puts the entire app on a white screen. I have read about error boundaries but not where to put them or how many.",
+    repoUrl: "https://github.com/aaysha/error-boundaries",
+    tags: ["React", "Next.js"],
+    criteria: ["Error Handling", "Structure"],
+  },
+  {
+    key: "django-orm",
+    author: "andrew_builds",
+    ageHours: 220,
+    title: "Django ORM query that gets slower as the table grows",
+    description:
+      "Fine at a thousand rows, painful at a hundred thousand. I would like to understand why rather than just being handed an index to add.",
+    repoUrl: "https://github.com/andrew/django-orm",
+    tags: ["Django", "Python"],
+    criteria: ["Query Design", "Performance"],
+  },
+  {
+    key: "go-worker-pool",
+    author: "maya_dev",
+    ageHours: 260,
+    title: "Worker pool that occasionally drops a job",
+    description:
+      "About one job in ten thousand never finishes. It is almost certainly my channel handling but it is rare enough to be miserable to reproduce.",
+    repoUrl: "https://github.com/maya/worker-pool",
+    tags: ["Go"],
+    criteria: ["Correctness", "Readability"],
+  },
+  {
+    key: "readme-rewrite",
+    author: "osini_dev",
+    ageHours: 300,
+    title: "Nobody can run my project from the README",
+    description:
+      "Three people have tried and all three got stuck in a different place. Looking for feedback on the instructions themselves rather than the code.",
+    repoUrl: "https://github.com/osini/readme-rewrite",
+    tags: ["Documentation"],
+    criteria: ["Clarity", "Completeness"],
+  },
+  {
+    key: "api-versioning",
+    author: "aqeel_codes",
+    ageHours: 340,
+    title: "Changing one response shape broke two other teams",
+    description:
+      "I renamed a field and everything downstream fell over. How do people version an API without maintaining two of everything forever?",
+    repoUrl: "https://github.com/aqeel/api-versioning",
+    tags: ["Express", "API"],
+    criteria: ["API Design", "Documentation"],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -201,6 +379,12 @@ const SUBMISSIONS = [
 // submission. That is the same rule the API enforces, so the seed data obeys the
 // same contract the real endpoint will.
 //
+// ageHours is how long ago the review was written. Without it every review was
+// created at the instant the seed ran, so every profile read "just now" against all
+// of them and the reviews-by-month chart was one bar no matter how old the data was.
+// Each one is checked below to be younger than the submission it is on, because a
+// review written before the thing it reviews is not something that can happen.
+//
 // Note what is deliberately absent: nobody reviews their own submission, and no
 // person appears twice on the same submission. The database would refuse both.
 // ---------------------------------------------------------------------------
@@ -208,6 +392,7 @@ const SUBMISSIONS = [
 const REVIEWS = [
   {
     submission: "bookstore-api",
+    ageHours: 3,
     reviewer: "aqeel_codes",
     strengths: "Routes are grouped sensibly and your error messages actually say what went wrong, which most first APIs get wrong.",
     improvements: "You validate inside each route handler. Move it into middleware so every route gets it for free and you cannot forget one.",
@@ -216,6 +401,7 @@ const REVIEWS = [
   },
   {
     submission: "bookstore-api",
+    ageHours: 2,
     reviewer: "osini_dev",
     strengths: "Good separation between the route file and the database calls. Easy to follow what happens where.",
     improvements: "Nothing stops a request sending extra fields you did not expect. Check the shape of the body before you trust any of it.",
@@ -224,6 +410,7 @@ const REVIEWS = [
   },
   {
     submission: "bookstore-api",
+    ageHours: 1,
     reviewer: "maya_dev",
     strengths: "The pagination is done properly with limit and offset rather than loading everything and slicing it.",
     improvements: "Your delete route returns 200 whether or not the row existed. Return 404 when it did not, otherwise callers cannot tell.",
@@ -232,6 +419,7 @@ const REVIEWS = [
   },
   {
     submission: "django-blog",
+    ageHours: 17,
     reviewer: "andrew_builds",
     strengths: "The password hashing is done correctly, which is the part most people get wrong when they roll their own.",
     improvements: "Sessions never expire. Anyone who gets hold of the cookie stays logged in forever, including after a password change.",
@@ -240,6 +428,7 @@ const REVIEWS = [
   },
   {
     submission: "django-blog",
+    ageHours: 12,
     reviewer: "aqeel_codes",
     strengths: "Small, clear views that read top to bottom. I understood the whole flow in about five minutes.",
     improvements: "Django's own auth does everything you wrote and has been attacked by the entire internet for fifteen years. Rewriting on top of it is the honest answer.",
@@ -248,6 +437,7 @@ const REVIEWS = [
   },
   {
     submission: "rust-dedup",
+    ageHours: 48,
     reviewer: "aaysha_dev",
     strengths: "The two stage hashing is smart. Cheap check first to rule most files out, expensive check only on the survivors.",
     improvements: "You read whole files into memory before hashing. Stream them in chunks and your memory use stops depending on file size.",
@@ -256,6 +446,7 @@ const REVIEWS = [
   },
   {
     submission: "rust-dedup",
+    ageHours: 35,
     reviewer: "maya_dev",
     strengths: "Good use of the type system to make an unhashed file impossible to compare by accident.",
     improvements: "The directory walk is recursive and will blow the stack on a deep tree. An explicit queue would be safer.",
@@ -264,6 +455,7 @@ const REVIEWS = [
   },
   {
     submission: "nextjs-migration",
+    ageHours: 5,
     reviewer: "osini_dev",
     strengths: "Sensible order of migration, leaf pages first, so you were never half broken in the middle of a user journey.",
     improvements: "Several components are marked as client components only because one child needed it. Push the boundary down to the child that actually needs it.",
@@ -272,6 +464,7 @@ const REVIEWS = [
   },
   {
     submission: "nextjs-migration",
+    ageHours: 4,
     reviewer: "aqeel_codes",
     strengths: "The data fetching in server components is clean and you are not double fetching on the client.",
     improvements: "Your shared types live in the component files. Pull them into one place or the two halves will drift apart.",
@@ -280,6 +473,7 @@ const REVIEWS = [
   },
   {
     submission: "slow-query",
+    ageHours: 91,
     reviewer: "maya_dev",
     strengths: "You included the EXPLAIN output, which is more than most people do and made this reviewable in one read.",
     improvements: "The sequential scan is on the join column. An index on that one column will do most of the work here.",
@@ -288,6 +482,7 @@ const REVIEWS = [
   },
   {
     submission: "slow-query",
+    ageHours: 66,
     reviewer: "aqeel_codes",
     strengths: "Selecting only the columns you need rather than everything is the right instinct and already saves you a lot.",
     improvements: "You filter after the join. Filter first and the join has far fewer rows to work with.",
@@ -296,6 +491,7 @@ const REVIEWS = [
   },
   {
     submission: "slow-query",
+    ageHours: 41,
     reviewer: "andrew_builds",
     strengths: "Clear naming in the query. I could tell what it was for without reading the surrounding code.",
     improvements: "Consider whether you need all 50,000 rows at once. Pagination would make the index question far less urgent.",
@@ -304,6 +500,7 @@ const REVIEWS = [
   },
   {
     submission: "ts-helpers",
+    ageHours: 130,
     reviewer: "osini_dev",
     strengths: "It genuinely is type safe. The compiler catches things at the call site that would be runtime bugs elsewhere.",
     improvements: "Four nested conditional types to save one cast is a bad trade. Write the simple version and add a comment saying why.",
@@ -312,11 +509,60 @@ const REVIEWS = [
   },
   {
     submission: "ts-helpers",
+    ageHours: 94,
     reviewer: "aaysha_dev",
     strengths: "The tests cover the tricky cases, so at least the behaviour is pinned down even where the types are dense.",
     improvements: "Name your generic parameters. T, U and V tell a reader nothing when there are three of them in one signature.",
     resources: [],
     scores: { Readability: 4, "Type Safety": 8 },
+  },
+
+  // Reviews on the longer set above, so the second page of the feed is a believable
+  // mix of answered and unanswered rather than a block of untouched posts.
+  {
+    submission: "form-validation",
+    ageHours: 3,
+    reviewer: "osini_dev",
+    strengths: "You spotted the duplication yourself before anyone told you, which is most of the work.",
+    improvements: "Keep the server copy as the real one and have the form call the same rules. The server has to check anyway, so the other two are the copies you can afford to lose.",
+    resources: [],
+    scores: { Structure: 6, Maintainability: 5 },
+  },
+  {
+    submission: "auth-middleware",
+    ageHours: 7,
+    reviewer: "aqeel_codes",
+    strengths: "Attaching the user to the request once rather than re-reading the token in every route is the right shape.",
+    improvements: "You verify the signature but never look at the expiry, so an old token still works. Check it, and decide what you want to happen to a request that arrives one second late.",
+    resources: [],
+    scores: { Security: 5, "Error Handling": 7 },
+  },
+  {
+    submission: "python-scraper",
+    ageHours: 40,
+    reviewer: "andrew_builds",
+    strengths: "The retry logic is sensible and you back off rather than hammering the site.",
+    improvements: "Your loop has a bare except that catches everything and moves on, which is why it looks like it finished. Catch the one error you expect and let the rest be loud.",
+    resources: [],
+    scores: { "Error Handling": 3, Readability: 7 },
+  },
+  {
+    submission: "rest-naming",
+    ageHours: 52,
+    reviewer: "andrew_builds",
+    strengths: "Asking before the marking rather than after is the correct instinct and the answer is easy.",
+    improvements: "The path names the thing, the method names the action. /users with GET, /users/:id with DELETE. Your three routes become two nouns.",
+    resources: ["https://restfulapi.net/resource-naming/"],
+    scores: { "API Design": 5, Consistency: 4 },
+  },
+  {
+    submission: "error-boundaries",
+    ageHours: 117,
+    reviewer: "maya_dev",
+    strengths: "Good instinct that one component should not be able to take the page down.",
+    improvements: "One boundary at the top only tells you the page broke. Put one around each section that can fail on its own and the rest of the page survives.",
+    resources: [],
+    scores: { "Error Handling": 5, Structure: 6 },
   },
 ];
 
@@ -345,7 +591,10 @@ async function main() {
   console.log(`  created ${USERS.length} users`);
 
   // Submissions, each with its criteria created in the same call.
-  const submissionsByKey = new Map<string, { id: string; criteria: Map<string, string> }>();
+  const submissionsByKey = new Map<
+    string,
+    { id: string; ageHours: number; criteria: Map<string, string> }
+  >();
 
   for (const item of SUBMISSIONS) {
     const authorId = usersByName.get(item.author);
@@ -372,6 +621,7 @@ async function main() {
 
     submissionsByKey.set(item.key, {
       id: created.id,
+      ageHours: item.ageHours,
       criteria: new Map(created.criteria.map((c) => [c.label, c.id])),
     });
   }
@@ -401,6 +651,15 @@ async function main() {
       );
     }
 
+    // A review cannot exist before the thing it reviews. A bigger ageHours here than on
+    // the submission means exactly that, so it is caught while seeding rather than
+    // showing up as a nonsense date on a profile during the demo.
+    if (review.ageHours >= submission.ageHours) {
+      throw new Error(
+        `Review on "${review.submission}" is ${review.ageHours}h old but the submission is only ${submission.ageHours}h old`
+      );
+    }
+
     await prisma.review.create({
       data: {
         submissionId: submission.id,
@@ -408,6 +667,9 @@ async function main() {
         strengths: review.strengths,
         improvements: review.improvements,
         resources: review.resources,
+        // Only createdAt. Review has no updatedAt column, unlike Submission, because a
+        // review is never edited once it is written.
+        createdAt: hoursAgo(review.ageHours),
         ratings: {
           create: Object.entries(review.scores).map(([label, score]) => ({
             score,
