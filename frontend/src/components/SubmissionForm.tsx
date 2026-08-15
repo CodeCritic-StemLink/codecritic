@@ -45,6 +45,25 @@ const MAX_CRITERIA = 5;
 const STEPS = ["Basics", "Tags", "Criteria", "Review"] as const;
 type Step = 0 | 1 | 2 | 3;
 
+/**
+ * The mark beside a field you have to fill in.
+ *
+ * Every field in this wizard is required, which is exactly why it needs saying: with
+ * nothing marked, a person cannot tell whether the form is strict or forgiving until
+ * the Next button refuses to light up and does not say why.
+ *
+ * aria-hidden because the asterisk is decoration for the eye. Screen readers get the
+ * same fact from the input's own `required`, and hearing "asterisk" after every label
+ * is noise.
+ */
+function RequiredMark() {
+  return (
+    <span aria-hidden className="text-destructive">
+      *
+    </span>
+  );
+}
+
 const EMPTY_STATE = {
   title: "",
   description: "",
@@ -261,20 +280,14 @@ export function SubmissionForm() {
           <ArrowLeft className="size-3.5" aria-hidden />
           Back to feed
         </Link>
-
-        <button
-          type="button"
-          onClick={resetForm}
-          className="flex items-center gap-1 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
-        >
-          <RotateCcw className="size-3.5" aria-hidden />
-          Reset
-        </button>
       </div>
 
       <h1 className="text-[21px] font-semibold tracking-tight">Post a review request</h1>
       <p className="mt-1 text-[13.5px] text-muted-foreground">
-        Tell reviewers what you built and what you want them to review.
+        Tell reviewers what you built and what you want them to review.{" "}
+        <span className="text-muted-foreground/80">
+          Fields marked <RequiredMark /> are required.
+        </span>
       </p>
 
       {/*
@@ -342,7 +355,7 @@ export function SubmissionForm() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="title" className="mb-1.5 block text-[12.5px] font-semibold">
-                    Title
+                    Title <RequiredMark />
                   </label>
                   <Input
                     id="title"
@@ -359,7 +372,7 @@ export function SubmissionForm() {
                     htmlFor="repoUrl"
                     className="mb-1.5 block text-[12.5px] font-semibold"
                   >
-                    Repository URL
+                    Repository URL <RequiredMark />
                   </label>
                   <Input
                     id="repoUrl"
@@ -388,7 +401,7 @@ export function SubmissionForm() {
                     htmlFor="description"
                     className="mb-1.5 block text-[12.5px] font-semibold"
                   >
-                    Description
+                    Description <RequiredMark />
                   </label>
                   <Textarea
                     id="description"
@@ -408,7 +421,7 @@ export function SubmissionForm() {
                   htmlFor="tag-draft"
                   className="mb-1.5 block text-[12.5px] font-semibold"
                 >
-                  Tags{" "}
+                  Tags <RequiredMark />{" "}
                   <span className="font-normal text-muted-foreground">
                     {tags.length} of {MAX_TAGS}
                   </span>
@@ -476,7 +489,7 @@ export function SubmissionForm() {
                   htmlFor="criterion-draft"
                   className="mb-1.5 block text-[12.5px] font-semibold"
                 >
-                  What should reviewers rate?{" "}
+                  What should reviewers rate? <RequiredMark />{" "}
                   <span className="font-normal text-muted-foreground">
                     {criteria.length} of {MAX_CRITERIA}
                   </span>
@@ -603,16 +616,30 @@ export function SubmissionForm() {
           </div>
 
           <div className="mt-4 flex items-center justify-between gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={goBack}
-              disabled={step === 0}
-              className="gap-1"
-            >
-              <ArrowLeft className="size-3.5" aria-hidden />
-              Back
-            </Button>
+            {/* Back and Reset together on the left, the one button that moves you
+                forward on the right. Reset used to sit up beside "Back to feed", a
+                long way from the form it clears. */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={goBack}
+                disabled={step === 0}
+                className="gap-1"
+              >
+                <ArrowLeft className="size-3.5" aria-hidden />
+                Back
+              </Button>
+
+              <button
+                type="button"
+                onClick={resetForm}
+                className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <RotateCcw className="size-3.5" aria-hidden />
+                Reset
+              </button>
+            </div>
 
             {step < 3 ? (
               <Button
