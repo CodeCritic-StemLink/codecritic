@@ -19,10 +19,20 @@ export type TagCount = {
 /**
  * How one tag is compared with another.
  *
- * Trimmed and lowercased, matching normaliseTag in the back end's ranking.service.ts.
- * Tags are typed by hand on the post form, so the same technology arrives as "Node",
- * "node" and sometimes " node ". They are one technology to a reader and must be one
- * technology here.
+ * Trimmed and lowercased. Tags are typed by hand on the post form, so the same
+ * technology arrives as "Node", "node" and sometimes " node ". They are one technology
+ * to a reader and must be one technology here.
+ *
+ * DELIBERATELY DUPLICATED from normaliseTag in backend/src/services/ranking.service.ts,
+ * which is the canonical one: the back end uses it for the ranking, the feed's tag
+ * filter and the profile insights. This copy exists because the browser cannot import
+ * from the back end, and the two must behave identically. If this rail grouped tags
+ * differently from the way the API filters them, clicking a tag would return a count
+ * that does not match the number printed beside it.
+ *
+ * Both sides are pinned by the same table of cases, so changing one without the other
+ * fails a test rather than shipping. See the "parity" block in
+ * frontend/tests/lib/tags.test.ts and backend/tests/services/ranking.service.test.ts.
  */
 export function normaliseTag(tag: string): string {
   return tag.trim().toLowerCase();

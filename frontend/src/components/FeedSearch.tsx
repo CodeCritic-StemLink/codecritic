@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Search, X } from "lucide-react";
 
@@ -24,6 +24,17 @@ import type { FeedParams } from "@/lib/feedUrl";
 //
 // router.replace rather than push, so twelve keystrokes do not become twelve entries in
 // your history that you have to press back through one at a time.
+//
+// The navigation runs inside startTransition, which is what makes this feel fast rather
+// than merely be fast. Without it, every keystroke replaced the whole feed with the
+// loading skeleton from app/loading.tsx while the server worked, so the results flashed
+// away and came back on each pause in typing. Inside a transition React keeps the
+// results you are already reading on screen and swaps them only when the new ones are
+// ready. The round trip to the database is the same length; you just are not staring at
+// an empty page for it.
+//
+// isPending is that transition still running, which is a better signal than comparing
+// text to the URL: it stays true until the new HTML has actually arrived.
 
 /** How long to wait after the last keystroke before searching. */
 const DEBOUNCE_MS = 300;
@@ -34,6 +45,7 @@ type Props = {
 
 export function FeedSearch({ params }: Props) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // What the address bar currently holds. The results on screen were rendered for this.
   const applied = params.search ?? "";
@@ -56,8 +68,8 @@ export function FeedSearch({ params }: Props) {
     setValue(applied);
   }
 
-  // True while the box holds something the server has not answered for yet.
-  const searching = value.trim() !== applied;
+  // Either the timer has not fired yet, or it has and the server is still answering.
+  const searching = value.trim() !== applied || isPending;
 
   useEffect(() => {
     const trimmed = value.trim();
@@ -67,9 +79,11 @@ export function FeedSearch({ params }: Props) {
     if (trimmed === applied) return;
 
     const timer = setTimeout(() => {
-      // null rather than "" for an empty box: feedUrl drops null keys, so clearing the
-      // search removes ?search= from the address instead of leaving ?search= behind.
-      router.replace(feedUrl(params, { search: trimmed || null }), { scroll: false });
+      startTransition(() => {
+        // null rather than "" for an empty box: feedUrl drops null keys, so clearing the
+        // search removes ?search= from the address instead of leaving ?search= behind.
+        router.replace(feedUrl(params, { search: trimmed || null }), { scroll: false });
+      });
     }, DEBOUNCE_MS);
 
     return () => clearTimeout(timer);

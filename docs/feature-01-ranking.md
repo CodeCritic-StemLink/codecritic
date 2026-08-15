@@ -1,9 +1,7 @@
 # Feature 01: the personalised feed
 
-The flagship deliverable, explained from the beginning. Written 2026-08-14.
-
-This document is what we present. It covers what the feature is, how it works, why we
-built it this way, what we rejected, and how to demonstrate it live.
+The feature the whole product turns on, explained from the beginning: what it is, how
+it works, why it is built this way, what was rejected, and how to see it working.
 
 ---
 
@@ -32,7 +30,7 @@ to see it, not to sit on page three under ten Rust posts.
 
 ---
 
-## 2. What the SRS demanded, and what we did
+## 2. What it has to do
 
 | Requirement | What we built |
 | --- | --- |
@@ -40,13 +38,13 @@ to see it, not to sit on page three under ten Rust posts.
 | Logged in sees the same set, reordered by tech stack | Tag matching, 12 points per matching tag |
 | **At least one improvement of our own** | **Three:** recency decay, a needs-help boost, and an already-reviewed penalty |
 | Demonstrable with real data | The "Why this order?" toggle explains every card in words |
-| Present the engine separately | This document |
+| Explain the engine on its own terms | This document |
 
-The SRS lists possible improvements: recency weighting, review history, skill-level
+The obvious candidates were recency weighting, review history, skill-level
 matching, weighting certain technologies more heavily. Recency is on their list. **The
-needs-help boost is not, and it is the one to present.** We also deliberately rejected
-one of their suggestions, weighting certain technologies more heavily, for a reason
-given in section 10.
+needs-help boost is not on any obvious list, and it is the one worth explaining.** We
+also deliberately rejected one of the obvious candidates, weighting certain technologies
+more heavily, for a reason given in section 10.
 
 ---
 
@@ -118,7 +116,7 @@ boundary. A curve means age always costs a little and nothing ever vanishes sudd
 
 A submission with **zero reviews** gets 6 points. One with reviews gets nothing extra.
 
-This is the part we are proudest of, and section 5 explains why.
+This is the part worth understanding, and section 5 explains why.
 
 ### Part four: the already-reviewed penalty, minus 8
 
@@ -128,7 +126,7 @@ One review per person per submission is a rule the API enforces. So a submission
 have already reviewed is one you can do **nothing more with**. It is dead weight in your
 feed, and it loses 8 points.
 
-It **drops rather than disappears**, for two reasons. The SRS asks for the same
+It **drops rather than disappears**, for two reasons. The feed shows everyone the same
 submissions reordered, not filtered. And you may well want to find your own review
 again.
 
@@ -171,8 +169,6 @@ post you cannot help with is worth less than an older one you can.
 
 ## 5. Why the needs-help boost exists
 
-This is the answer to give when asked "what improvement did you design, and why?"
-
 **The problem it solves:** without it, the site quietly becomes unfair.
 
 ```
@@ -202,8 +198,8 @@ test("the needs-help bonus never outranks a genuine extra tag match")
 
 ## 6. Why the numbers are 12, 10, 6 and 8
 
-Expect to be asked "why 12 and not 5?". **These are not measurements. They are four
-sentences about what matters more than what.**
+"Why 12 and not 5?" is the obvious question. **These are not measurements. They are
+four sentences about what matters more than what.**
 
 | Statement | Why the numbers make it true |
 | --- | --- |
@@ -228,7 +224,7 @@ brand new Rust post, you do not know Rust      0 + 10 + 0  = 10
 2 day old React post, you do know React        5 +  5 + 0  = 10
 ```
 
-**A tie.** The React developer's feed fills with Rust. The SRS specifically requires
+**A tie.** The React developer's feed fills with Rust. The whole point is
 posts matching your stack to come first, so 5 fails the requirement outright.
 
 ### Why 6 specifically
@@ -253,7 +249,7 @@ sorts your feed; it does not censor it.
 **Nothing would change.** Double every number and every order is identical. Only the
 ratios do any work. That answer is stronger than pretending we measured something.
 
-Each is a named constant, so a mentor asking "what if you tuned this?" can watch it
+Each is a named constant, so anyone asking "what if you tuned this?" can watch it
 change in one line:
 
 ```ts
@@ -298,7 +294,8 @@ sort them and show 20 wastes the other 480.
 
 ## 8. The order of operations, and the bug it avoids
 
-This is subtle and worth knowing, because it is the kind of thing a mentor probes.
+This is subtle and worth knowing, because it is the kind of thing that looks correct
+and is not.
 
 ```
    RIGHT                              WRONG
@@ -327,8 +324,7 @@ service as a comment rather than pretended away.
 
 ## 8b. What is not Feature 01
 
-Two things on the feed page look related and are not, and it is worth being clear at
-assessment.
+Two things on the feed page look related and are not, and confusing them is easy.
 
 | | The tag rail on the left | Feature 01 |
 | --- | --- | --- |
@@ -337,7 +333,7 @@ assessment.
 | Depends on who you are | No, same for everyone | Yes, that is the whole point |
 
 **Feature 01 filters nothing.** Say this clearly, because "we filter by tech stack" is
-the easiest wrong sentence to say about it, and it describes a design the SRS
+the easiest wrong sentence to say about it, and it describes a design we
 specifically did not ask for. Every submission is in every feed. A Rust post in a React
 developer's feed is still there, further down.
 
@@ -348,7 +344,7 @@ harm the needs-help boost exists to prevent.
 The tag rail counts the technologies of the submissions currently on screen, takes the
 top eight, and links each one to `?tag=...`. It is headed **"In these results"** rather
 than "Technologies" because that is what it counts. Calling it "Technologies" would
-imply totals across the whole site, which would need a counting endpoint the SRS never
+imply totals across the whole site, which would need a counting endpoint nothing else
 asked for.
 
 ---
@@ -369,7 +365,7 @@ same lesson twice.
 
 | Version | Problem |
 | --- | --- |
-| `score 33 = tags 24 (React, Tailwind) + fresh 3 + needs help 6` | Correct and unreadable. Nobody outside the group knows what "fresh 3" is. |
+| `score 33 = tags 24 (React, Tailwind) + fresh 3 + needs help 6` | Correct and unreadable. Nobody outside this codebase knows what "fresh 3" is. |
 | A headed panel with one labelled row per part and a total | Readable, and four times the height of the card it was explaining. |
 | **One line, score first, parts as small print** | What is there now. |
 
@@ -377,9 +373,8 @@ A part worth zero is **left out entirely** rather than given a row saying nothin
 happened. If every part is zero, which is what an old answered post in a technology you
 do not use looks like, it says "nothing matched".
 
-This turns the demo from "trust me, it is sorted" into arithmetic anybody can check on
-screen. **Use it in the live demonstration.** It is also just a URL, `/?why=1`, so it
-can be linked to.
+This turns the feed from "trust me, it is sorted" into arithmetic anybody can check on
+screen. It is also just a URL, `/?why=1`, so a particular view of it can be linked to.
 
 Nothing is calculated in the browser. `ScoreExplainer.tsx` only puts words to numbers
 the server handed it.
@@ -387,7 +382,7 @@ the server handed it.
 ### The tests
 
 30 automated tests in `backend/tests/services/ranking.service.test.ts`, covering the
-parts a demo cannot show:
+parts the screen cannot show:
 
 - every piece adds up to the total
 - one matching tag beats the entire recency range
@@ -401,7 +396,7 @@ parts a demo cannot show:
 
 They need no database, because `ranking.service.ts` imports nothing but its own maths.
 
-### The demonstration script
+### Seeing it work
 
 1. Open the feed **logged out**. Point out the order is by date.
 2. Sign in as a **front end** account. The order changes; React posts rise.
@@ -417,7 +412,7 @@ Expect "what alternatives did you consider?". These are real ones with real reas
 
 | Alternative | Why not |
 | --- | --- |
-| **Hide posts that do not match your stack** | The SRS says the same submissions, reordered. Hiding is a filter, not a ranking, and it would trap a beginner's post where nobody sees it. |
+| **Hide posts that do not match your stack** | The feed is the same submissions, reordered. Hiding is a filter, not a ranking, and it would trap a beginner's post where nobody sees it. |
 | **Sort in SQL with `ORDER BY`** | The needs-help boost and the decay curve are awkward in SQL, and a pure function is testable with no database. We ranked in the service instead. |
 | **Weight some technologies more than others** | Who decides React is worth more than Rust? It would need a table of weights nobody could defend. |
 | **Use review history rather than the declared stack** | A better signal in principle, but a brand new user has no history, so their first feed would be unranked. The declared stack works from the first minute. |
@@ -453,7 +448,7 @@ All four disagreed at one point, and each disagreement looked like a different b
 "node 1", and a profile did the same. **One rule in one place is why they cannot drift
 apart again.**
 
-**Scores are computed on every request.** Fine for a demo, and fine into the thousands.
+**Scores are computed on every request.** Fine into the thousands of submissions.
 A very large site would cache them.
 
 **Nothing learns.** The formula treats every user with the same stack identically. It
@@ -463,7 +458,7 @@ does not notice that you always review Prisma questions and never React ones.
 
 ## 12. How we would make it better
 
-Asked "what next?", these are the honest answers, cheapest first.
+The honest answers to "what next?", cheapest first.
 
 ### 1. Fold in review history
 
@@ -481,11 +476,11 @@ answer Prisma questions.
 
 **Why it is not in the build:** a new user has no history, so it must be an addition to
 tag matching rather than a replacement, and we would want the numbers argued through by
-the group rather than picked by one person the night before submission.
+everyone working on it rather than picked by one person in an afternoon.
 
 ### 2. Difficulty matching
 
-The SRS suggests skill-level matching. We have no difficulty field, but Karma is a
+Skill-level matching is the obvious next idea. There is no difficulty field, but Karma is a
 rough proxy: a reviewer with 50 Karma could be nudged toward posts nobody else has
 managed to answer. **We rejected it for now** because Karma measures how much you
 review, not how well, and treating volume as skill would be a claim we cannot support.
@@ -504,7 +499,7 @@ lack.
 
 ---
 
-## 13. Questions to have answers ready for
+## 13. Common questions
 
 **Where does the ranking run?** On the server, in `GET /submissions`. The browser gets
 the finished order.

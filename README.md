@@ -1,306 +1,239 @@
 # CodeCritic
 
-A peer code review platform. Developers submit their projects for review, receive structured
-feedback from other developers, review other people's work in return, and earn Karma points for
-contributing.
+A peer code review platform. You post a link to something you have built, say what you
+want looked at, and other developers write structured feedback and score it against
+criteria you chose yourself. Writing a review earns you Karma.
 
-Built as an MVP for the **Software Engineering Professionals Program**.
+The feed is public and readable without an account. Posting a request and writing a
+review both require signing in.
 
 | | |
 | --- | --- |
-| Version | MVP: public feed, authenticated submit and review workflow, Karma based contribution system |
-| Platform | Developer focused peer code review social platform |
-| Live site | Not deployed yet |
+| Front end | Next.js, TypeScript, Tailwind CSS, Shadcn/UI |
+| Authentication | Clerk |
+| Back end | Node.js, Express, TypeScript |
+| Database | PostgreSQL through Prisma |
+| Hosting | Vercel for the front end, a hosted API and database behind it |
 
-> **New to this project? Read [docs/team-guide.md](docs/team-guide.md) first.** It covers setup
-> from nothing, how we use branches and pull requests, who owns what, and the plan to the
-> deadline.
+> Design documents live in [`docs/`](docs/). Start with
+> [docs/README.md](docs/README.md).
 
 ---
 
-## Table of contents
+## Contents
 
 1. [What the platform does](#what-the-platform-does)
-2. [Technical stack](#technical-stack)
-3. [System roles](#system-roles)
-4. [Core entities](#core-entities)
-5. [Submission workflow](#submission-workflow)
-6. [Review workflow](#review-workflow)
-7. [Review request status](#review-request-status)
-8. [Constraints and assumptions](#constraints-and-assumptions)
-9. [Challenge features](#challenge-features)
-10. [Repository structure](#repository-structure)
-11. [Team](#team)
-12. [Submission deliverables](#submission-deliverables)
+2. [Roles](#roles)
+3. [The five tables](#the-five-tables)
+4. [Posting a request](#posting-a-request)
+5. [Writing a review](#writing-a-review)
+6. [Rules the API enforces](#rules-the-api-enforces)
+7. [The two features](#the-two-features)
+8. [Repository layout](#repository-layout)
+9. [Running it locally](#running-it-locally)
 
 ---
 
 ## What the platform does
 
-A developer posts a link to a project they want feedback on, describes the feedback they are
-looking for, and defines the specific criteria they want reviewers to score. Other developers
-open that request, write structured feedback, and give a rating out of 10 against each criterion.
-Writing a review earns the reviewer **+2 Karma**, a running total that represents how much they
-have contributed to the community.
+Somebody posts a link to a project, describes the feedback they are after, and defines
+the criteria they want scored. Other developers open that request, write what was done
+well and what needs improving, and give a mark out of 10 against every criterion the
+poster chose.
 
-The home feed is public and readable without an account. Posting a request and writing a review
-both require signing in.
-
----
-
-## Technical stack
-
-| Layer | Technology |
-| --- | --- |
-| Front end | Next.js, Tailwind CSS, Shadcn/UI, Zustand |
-| Authentication | Clerk |
-| Back end | Node.js + Express |
-| ORM | Prisma |
-| Database | SQL (relational) |
-| Deployment | Vercel for the front end, plus a hosted back end and database |
-| Repository | This single repository holds both the front end and the back end |
+Writing a review earns **+2 Karma**, a running total showing how much somebody has put
+back in.
 
 ---
 
-## System roles
+## Roles
 
-There is **no admin or moderator role** in this MVP. Every authenticated user has the same
-capabilities.
+There is **no admin and no moderator**. Every signed in user has the same abilities.
 
-### Visitor (logged out)
+**Visitor, signed out**
 
-- Browses all review requests on the public home feed, most recent first
-- Searches and filters review requests
-- Opens any individual review request to view its full details
-- Views any user's public profile
+- Reads the feed, newest first
+- Searches and filters by technology or by whether a request has been answered
+- Opens any request in full
+- Reads any public profile
 
-### Authenticated user (Clerk login)
+**Signed in user**
 
-A single authenticated role that acts as **both submitter and reviewer**, depending on context.
+The same person is both submitter and reviewer, depending on which page they are on.
 
-- Signs up and logs in through Clerk, then completes a profile: username, tech stack, bio,
-  GitHub link
-- Posts review requests for their own projects, defining custom review criteria
-- Reviews other users' requests: written feedback, optional resources, and a rating for each
-  criterion
-- Earns Karma points for each review submitted
-- Views a personalised, reordered home feed
-- Manages their own activity: requests posted, reviews given, and reviews received
+- Completes a profile: username, technologies, bio, GitHub link
+- Posts requests with criteria of their own choosing
+- Reviews other people's requests
+- Earns Karma per review
+- Sees the feed reordered around the technologies on their profile
+- Manages their own activity: requests posted, reviews written, reviews received
 
 ---
 
-## Core entities
+## The five tables
 
-| Entity | Description |
-| --- | --- |
-| **User** | An authenticated person (via Clerk) with a profile, a tech stack, and a Karma point total. |
-| **Submission (Review Request)** | A request for review posted by a user. Includes a title, description, GitHub URL, technology tags, and a set of custom review criteria. |
-| **Review** | Feedback submitted by one user on another user's submission. Includes strengths, improvements, optional resources, and a rating per criterion. |
-| **Review Criteria** | A set of 1 to 5 criteria, defined by the submitter on each submission, that reviewers must rate. For example "Code Quality" or "API Design". |
-| **Karma** | A point total attached to each user, representing their contribution level. Increases by a fixed amount per review submitted. |
-
----
-
-## Submission workflow
-
-1. A logged in user chooses to post a review request.
-2. They provide a project title, a description of the feedback they want, a GitHub repository
-   URL, and one or more technology tags.
-3. They define **custom review criteria**, between 1 and 5, that reviewers will rate.
-4. The request is published to the public feed and becomes browsable and searchable by everyone.
-5. The submitter can later view all reviews received under each of their requests.
-
----
-
-## Review workflow
-
-1. A logged in user opens a review request posted by **another** user.
-2. They choose to start a review.
-3. They provide written feedback on what was done well and what needs improvement, optionally
-   adding resource links.
-4. They give a numeric rating out of 10 for **each** criterion the submitter defined on that
-   request.
-5. On submission, the reviewer earns **+2 Karma points**.
-6. The review becomes visible to the submitter, and the reviewer's updated Karma appears on
-   their profile and in their navigation.
-
----
-
-## Review request status
-
-| Status | Description | Updated by |
+| Table | Holds one | Related to |
 | --- | --- | --- |
-| **Pending** | The request has been posted but has received no reviews yet. | System |
-| **Reviewed** | The request has received one or more reviews. | System |
+| **User** | A person: username, bio, technologies, GitHub link, Karma | Has many Submissions and many Reviews written |
+| **Submission** | A review request: title, description, repo link, tags | Belongs to a User. Has 1 to 5 Criteria and many Reviews |
+| **Criterion** | One thing to be scored, invented by whoever posted | Belongs to a Submission. Gets one Rating per Review |
+| **Review** | One person's feedback: strengths, improvements, links | Belongs to a Submission and to the User who wrote it |
+| **Rating** | A single score out of 10 | Belongs to a Review and a Criterion |
 
-This MVP has **no rejection, deletion, or moderation workflow**. A request, once posted, stays on
-the platform. Karma, once earned, is not removed.
+Two decisions worth knowing up front:
 
----
+**Karma is a column on User, not a table.** It only ever moves by +2, only inside the
+transaction that writes a review, and never downward. The Review table already is the
+log, so a second one could only disagree with it.
 
-## Constraints and assumptions
+**Status is not stored.** Pending and reviewed are derived by counting a submission's
+reviews. A stored flag can go stale; a count cannot disagree with itself.
 
-- Authentication is handled entirely through Clerk. The back end associates each Clerk identity
-  with a user record in our own database.
-- The public feed is visible without authentication. Posting and reviewing require login.
-- The front end is responsive across mobile, tablet, and desktop.
-- Karma is fixed at **+2 per review**. Static, with no weighting or dynamic scoring.
-- A user must not be able to edit another user's profile or content.
-- **All input is validated on the back end, not only in the UI.** Mentors will test API
-  endpoints directly, outside the front end.
-- Karma must not be obtainable without a genuine review.
-- The front end and the back end live in this one shared repository.
-- All group members contribute visibly through the repository: commits, branches, pull requests.
-- There is no real time notification system in this MVP.
+Full reasoning in [docs/database-design.md](docs/database-design.md), with the diagram
+in [docs/er-diagram.svg](docs/er-diagram.svg).
 
 ---
 
-## Challenge features
+## Posting a request
 
-### Feature 01: Personalised recommendation feed (mandatory)
-
-The flagship group deliverable.
-
-Logged out visitors see all submissions most recent first. Logged in users see the **same
-submissions, intelligently reordered** so that the most relevant requests surface first.
-
-- The feed is reordered for a logged in user so that requests matching that user's own tech stack
-  appear ahead of those that do not.
-- The engine goes beyond simple tag matching with at least one ranking improvement of our own
-  design.
-- The reordering is demonstrable with real data: the feed order visibly changes based on who is
-  logged in.
-- The engine is presented separately, covering how it works, why it was designed that way, what
-  alternatives were considered, and a live demonstration.
-
-### Feature 02: Reviewer reputation and profile insights (optional)
-
-Extends user profiles into a richer view that helps users judge a reviewer's contribution and
-credibility before trusting their feedback.
-
-- A public profile page at `/profile/:username` displaying tech stack, bio, GitHub link, total
-  Karma, and counts of reviews given and reviews received.
-- At least one meaningful insight beyond raw counts, derived correctly from real data in the
-  database. For example the technologies a user most often reviews in, or a breakdown of their
-  review activity over time.
-- Clear navigation back to the feed.
+1. Give a title, a description of the feedback you want, and a repository link
+2. Add one or more technology tags
+3. Define 1 to 5 criteria reviewers will score
+4. The request appears on the public feed, searchable by everyone
+5. Reviews arrive underneath it
 
 ---
 
-## Repository structure
+## Writing a review
+
+1. Open somebody else's request
+2. Write what was done well and what needs improving, with optional resource links
+3. Score every criterion out of 10
+4. On save you earn **+2 Karma**
+
+The review, its ratings and the Karma are written in **one transaction**. Either all
+three happen or none do, which is what makes the Karma total trustworthy: there is no
+path that produces points without a stored review, and none that stores a review without
+the points.
+
+---
+
+## Rules the API enforces
+
+Every one of these lives in the API, not in a form. A rule written only in React is a
+suggestion, because anything can call the API directly and skip the form.
+
+- You cannot review your own submission
+- One review per person per submission, backed by a unique constraint in the database
+- Every criterion must be scored, and every score is a whole number from 1 to 10
+- Between 1 and 5 criteria, and at least one tag, on every submission
+- Title, description and a repository link are required
+- Links must start with `http://` or `https://`. A GitHub field must be on `github.com`
+- Karma cannot be set through any request body
+- You cannot edit anybody's profile but your own
+
+Nothing is ever deleted. There is no rejection or moderation anywhere, and Karma once
+earned is never removed.
+
+Every rule, with its error code, is in [docs/api-design.md](docs/api-design.md).
+
+---
+
+## The two features
+
+**[The personalised feed](docs/feature-01-ranking.md).** Signed out you get newest
+first. Signed in you get the same submissions in a different order, worked out from the
+technologies on your profile, how recent each request is, whether anybody has answered
+it yet, and whether you already have. The scoring runs on the server, and a toggle on
+the feed shows the arithmetic for every card.
+
+**[Profiles and reputation](docs/feature-02-profiles.md).** A public page per user with
+Karma, reviews given and received in full, and three figures derived from real review
+history: the technologies somebody actually reviews in, the average score they give, and
+their activity by month.
+
+---
+
+## Repository layout
 
 ```
 codecritic/
-  backend/     Express API, TypeScript, Prisma schema, seed script
-  frontend/    Next.js app, TypeScript, Tailwind, Shadcn, Zustand, Clerk
-  docs/        database/ER design and API design documents
+  backend/     Express API, Prisma schema, seed script, tests
+  frontend/    Next.js app, components, tests
+  docs/        design documents
   README.md
 ```
 
 ---
 
-## Getting started
+## Running it locally
 
-You need Node 22 or newer. Check with `node --version`.
+Node 22 or newer. Check with `node --version`.
 
-### The back end
+### Back end
 
-From the repository root:
-
-```
-cd backend
-npm install
+```bash
+cd backend && npm install
 ```
 
-Create a file called `.env` inside `backend` containing:
+Create `backend/.env`:
 
 | Variable | Value |
 | --- | --- |
-| `DATABASE_URL` | The PostgreSQL connection string from Neon. Ask Osini. |
+| `DATABASE_URL` | The PostgreSQL connection string |
 
-Environment files are ignored by git and are never committed, so ask a team member for the
-values rather than looking for them in the repository.
+Environment files are ignored by git and never committed.
 
-```
+```bash
 npx prisma generate
 ```
 
-**Do not skip that command.** Prisma 7 writes the database client into `src/generated/prisma`,
-which is not committed, so nothing compiles until you generate it on your own machine. Run it
-again any time `prisma/schema.prisma` changes.
+**Do not skip that.** Prisma writes the database client into `src/generated/prisma`,
+which is not committed, so nothing compiles until it is generated on your own machine.
+Run it again whenever `prisma/schema.prisma` changes.
 
-If the database is empty on your machine, create the tables:
+If your database is empty, create the tables and fill them with demo data:
 
+```bash
+npx prisma migrate dev && npm run seed
 ```
-npx prisma migrate dev
-```
 
-Then start it:
+`npm run seed` **wipes every row first**, so never point it at data you care about.
 
-```
+```bash
 npm run dev
 ```
 
-The API runs at http://localhost:4000/api. Check it is alive at
-http://localhost:4000/api/health, which should return `{"ok":true,"service":"codecritic-api"}`.
-
-Useful extras:
+The API runs at http://localhost:4000/api. Check
+http://localhost:4000/api/health, which returns `{"ok":true,"service":"codecritic-api"}`.
 
 | Command | What it does |
 | --- | --- |
-| `npx prisma studio` | Opens a browser view of the database where you can read and edit rows |
+| `npm test` | Runs the test suite |
+| `npm run typecheck` | Type checks the app and the tests |
+| `npx prisma studio` | A browser view of the database |
 | `npm run build` | Compiles TypeScript into `dist` |
-| `npm start` | Runs the compiled JavaScript, which is what the live server does |
 
-### The front end
+### Front end
 
-From the repository root:
-
-```
-cd frontend
-npm install
+```bash
+cd frontend && npm install
 ```
 
-Create a file called `.env.local` inside `frontend` containing:
+Create `frontend/.env.local`:
 
 | Variable | Value |
 | --- | --- |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | From the Clerk dashboard, Configure then API Keys. Starts with `pk_test_`. |
-| `CLERK_SECRET_KEY` | Same page. Starts with `sk_test_`. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | From the Clerk dashboard, Configure then API Keys. Starts with `pk_test_` |
+| `CLERK_SECRET_KEY` | Same page. Starts with `sk_test_` |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:4000/api` |
 
-Anything named `NEXT_PUBLIC_` is sent to the browser and is readable by any visitor. Never put
-that prefix in front of a secret.
+Anything named `NEXT_PUBLIC_` is sent to the browser and readable by any visitor. Never
+put that prefix in front of a secret.
 
-Then start it:
-
-```
+```bash
 npm run dev
 ```
 
-The site runs at http://localhost:3000. The back end must be running as well, or the pages will
+The site runs at http://localhost:3000. The back end has to be running too, or the pages
 have no data to show.
-
----
-
-## Team
-
-| Name | GitHub |
-| --- | --- |
-| Osini Navoda | |
-| Aqeel Ameer | |
-| Andrew Sachin | |
-| Aaysha Muzammil | |
-
-Every member participates in an individual walkthrough during final assessment, and must be able
-to explain, justify, and modify **any** part of the system, including parts they did not
-personally write.
-
----
-
-## Submission deliverables
-
-- The deployed project link. Every team member submits it separately from their own cohort.
-- This single repository, containing both the front end and the back end.
-- The design documents (database/ER design and API design), produced before implementation and
-  refined as we build. They live in `docs/`.

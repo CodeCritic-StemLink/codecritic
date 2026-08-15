@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { auth } from "@clerk/nextjs/server";
 // No GitHub icon here on purpose: lucide-react does not ship brand logos, so
 // ExternalLink is what an outgoing link gets everywhere on the site.
 import { CircleCheck, CircleDashed, ExternalLink, Pencil } from "lucide-react";
 
-import { getProfile, getMe } from "@/services/user.service";
+import { getProfile } from "@/services/user.service";
+import { getViewer } from "@/services/viewer";
 import { Badge } from "@/components/ui/badge";
 import { ReviewCard } from "@/components/ReviewCard";
 import { PageShell } from "@/components/PageShell";
@@ -99,12 +99,30 @@ export default async function ProfilePage({
   const { username } = await params;
   const query = ((await searchParams) ?? {}) as Record<string, string | undefined>;
 
+  /*
+   * Both requests start together.
+   *
+   * They used to run one after the other: the profile, and then, only once it had come
+   * back, who is reading it. Neither depends on the other, so that was one round trip
+   * to Singapore spent waiting for nothing. On a page already taking over a second,
+   * that was a large share of it.
+   *
+   * allSettled rather than all, because getProfile is allowed to fail loudly here while
+   * the viewer never is. See below.
+   */
+  const [profileResult, viewerResult] = await Promise.allSettled([
+    getProfile(username),
+    getViewer(),
+  ]);
+
   let profile;
   let failure: string | null = null;
 
-  try {
-    profile = await getProfile(username);
-  } catch (error) {
+  if (profileResult.status === "fulfilled") {
+    profile = profileResult.value;
+  } else {
+    const error = profileResult.reason;
+
     if (error instanceof ApiError && error.code === "USER_NOT_FOUND") {
       notFound();
     }
@@ -126,29 +144,16 @@ export default async function ProfilePage({
    * Is the person reading this the person it is about?
    *
    * Only decides whether an Edit button is drawn. It is not a permission check and does
-   * not need to be: /users/sync updates whichever row the caller's own token resolves
-   * to, and there is no user id anywhere in its body, so there is nothing to forge.
-   * Hiding the button is politeness, not security.
+   * not need to be: PATCH /users/me updates whichever row the caller's own token
+   * resolves to, and there is no user id anywhere in its path or body, so there is
+   * nothing to forge. Hiding the button is politeness, not security.
    *
-   * Wrapped because a signed in visitor who has not finished profile setup has no row
-   * yet, and a 404 from getMe must not take down somebody else's public profile.
+   * getViewer never throws, so a rejection here means something truly unexpected. Not
+   * knowing who is reading is not a reason to fail somebody else's public profile, so
+   * the button simply does not appear.
    */
-  let viewingOwnProfile = false;
-
-  const { userId, getToken } = await auth();
-
-  if (userId) {
-    try {
-      const token = await getToken();
-
-      if (token) {
-        const { user: me } = await getMe(token);
-        viewingOwnProfile = me.username === profile.username;
-      }
-    } catch {
-      // Swallowed on purpose. See above.
-    }
-  }
+  const viewer = viewerResult.status === "fulfilled" ? viewerResult.value : null;
+  const viewingOwnProfile = viewer?.me?.username === profile.username;
 
   const maxTagCount = Math.max(0, ...profile.insights.reviewsByTag.map((entry) => entry.count));
   const maxMonthCount = Math.max(0, ...profile.insights.reviewsByMonth.map((e) => e.count));

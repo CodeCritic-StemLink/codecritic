@@ -15,6 +15,7 @@ import { getMe, syncProfile, updateProfile } from "@/services/user.service";
 import { ApiError } from "@/api/api";
 import { normaliseTag } from "@/lib/tags";
 import { canSaveProfile, classifyProfileLoadFailure } from "@/lib/profileLoad";
+import { urlProblem } from "@/lib/url";
 import type { ProfileLoadState } from "@/lib/profileLoad";
 
 // Finish setting up your profile.
@@ -250,11 +251,17 @@ export default function ProfileSetupPage() {
         return;
       }
 
+      /*
+       * null, not undefined, for a box the person emptied.
+       *
+       * JSON.stringify drops undefined keys, so an emptied bio never reached the API
+       * at all and the old one stayed put. Sending null says "clear this" out loud.
+       */
       const values = {
         username: username.trim(),
-        bio: bio.trim() || undefined,
+        bio: bio.trim() || null,
         techStack,
-        githubUrl: githubUrl.trim() || undefined,
+        githubUrl: githubUrl.trim() || null,
       };
 
       /*
@@ -313,6 +320,10 @@ export default function ProfileSetupPage() {
 
   const full = techStack.length >= MAX_TECH;
   const editing = loadState === "existing";
+
+  // Null when the box is empty or holds a real GitHub link. The API enforces the same
+  // rule; this is so somebody finds out while typing. See lib/url.ts.
+  const githubProblem = urlProblem(githubUrl, "github");
 
   // Nothing may be typed or saved until we know what is already there.
   const locked = loadState === "loading" || loadState === "unavailable";
@@ -444,9 +455,23 @@ export default function ProfileSetupPage() {
                   value={githubUrl}
                   onChange={(e) => setGithubUrl(e.target.value)}
                   placeholder="https://github.com/you"
+                  aria-invalid={githubProblem ? true : undefined}
+                  aria-describedby="github-hint"
+                  className={githubProblem ? "border-destructive" : ""}
                 />
-                <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                  Shown as a link on your profile.
+                {/*
+                  Shown as you type rather than only after saving. The API enforces the
+                  same rule, so this is a courtesy, but finding out on submit that a
+                  link was wrong means retyping it from a page that has moved on.
+                */}
+                <p
+                  id="github-hint"
+                  className={[
+                    "mt-1 text-[11.5px] leading-relaxed",
+                    githubProblem ? "text-destructive" : "text-muted-foreground",
+                  ].join(" ")}
+                >
+                  {githubProblem ?? "Shown as a link on your profile."}
                 </p>
               </div>
 
@@ -605,7 +630,7 @@ export default function ProfileSetupPage() {
         <div className="flex flex-col items-center gap-2 pb-2">
           <Button
             type="submit"
-            disabled={locked || saving || username.trim().length < 3}
+            disabled={locked || saving || username.trim().length < 3 || githubProblem !== null}
             className="w-full sm:w-auto sm:min-w-[220px]"
           >
             {saving ? "Saving" : editing ? "Save changes" : "Save and see my profile"}
@@ -618,7 +643,9 @@ export default function ProfileSetupPage() {
                 : "Saving is off until your profile loads."
               : username.trim().length < 3
                 ? "A username of at least 3 characters is needed."
-                : "Your Karma, your requests and your reviews are never touched by saving."}
+                : githubProblem
+                  ? "Fix the GitHub link, or clear the box, before saving."
+                  : "Your Karma, your requests and your reviews are never touched by saving."}
           </span>
         </div>
       </form>

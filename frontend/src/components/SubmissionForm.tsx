@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { createSubmission } from "@/services/submission.service";
+import { urlProblem } from "@/lib/url";
 import { ApiError } from "@/api/api";
 
 // The post-a-request form, as a 4-step wizard, with a tips sidebar alongside it.
@@ -141,8 +142,21 @@ export function SubmissionForm() {
     setCriteria((current) => current.filter((_, i) => i !== index));
   }
 
+  /*
+   * The repository link has to be a real http or https link, not just a non-empty box.
+   *
+   * This step's Next button is a plain button rather than a form submit, so the
+   * browser's own `type="url"` checking never runs: nothing stops "abc" reaching the
+   * API and coming back as INVALID_REPO_URL three steps later. The API still enforces
+   * it; this is so the problem is visible where it was typed. See lib/url.ts.
+   */
+  const repoProblem = urlProblem(repoUrl);
+
   const basicsValid =
-    title.trim().length > 0 && description.trim().length > 0 && repoUrl.trim().length > 0;
+    title.trim().length > 0 &&
+    description.trim().length > 0 &&
+    repoUrl.trim().length > 0 &&
+    repoProblem === null;
   const tagsValid = tags.length > 0;
   const criteriaValid = criteria.length > 0;
   const canSubmit = basicsValid && tagsValid && criteriaValid && !submitting;
@@ -351,7 +365,19 @@ export function SubmissionForm() {
                     value={repoUrl}
                     onChange={(e) => setRepoUrl(e.target.value)}
                     placeholder="https://github.com/you/project"
+                    aria-invalid={repoProblem ? true : undefined}
+                    aria-describedby="repoUrl-hint"
+                    className={repoProblem ? "border-destructive" : ""}
                   />
+                  <p
+                    id="repoUrl-hint"
+                    className={[
+                      "mt-1 text-[12px]",
+                      repoProblem ? "text-destructive" : "text-muted-foreground",
+                    ].join(" ")}
+                  >
+                    {repoProblem ?? "Paste the link to the repository you want reviewed."}
+                  </p>
                 </div>
               </div>
             ) : null}

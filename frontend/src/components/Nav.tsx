@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import { Plus } from "lucide-react";
 
 import { BrandMark } from "@/components/BrandMark";
 import { UserMenu } from "@/components/UserMenu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
-import { getMe } from "@/services/user.service";
+import { getViewer } from "@/services/viewer";
 
 // The navbar: brand mark, the navigation links, a karma chip, a Post a request button,
 // and the account menu.
@@ -20,27 +19,11 @@ import { getMe } from "@/services/user.service";
 // the container below, and NavLinks.tsx for why they moved out of the centre.
 
 export async function Nav() {
-  const { userId, getToken } = await auth();
-
-  let me: { username: string; karma: number } | null = null;
-
-  if (userId) {
-    const token = await getToken();
-
-    // The karma chip is not worth breaking a page over. If there is no token, the
-    // API is unreachable, the token has expired, or the row does not exist yet
-    // because POST /users/sync has never run, render the nav without it rather than
-    // taking the whole site down. Nav runs on every route from the root layout, so a
-    // rethrown error here is a crashed site, not a missing chip.
-    if (token) {
-      try {
-        const { user } = await getMe(token);
-        me = { username: user.username, karma: user.karma };
-      } catch {
-        // Swallowed on purpose. See above.
-      }
-    }
-  }
+  // Shared with whatever page is rendering beside this one, so /users/me is fetched
+  // once per request rather than once here and again on the page. See viewer.ts, which
+  // also explains why a failure here is swallowed rather than thrown: this renders on
+  // every route, so an error would be a crashed site rather than a missing karma chip.
+  const { me, signedIn: userId } = await getViewer();
 
   return (
     <header className="border-b bg-card">
@@ -67,7 +50,7 @@ export async function Nav() {
         which is what stranded the links in the dead centre of a wide screen with a gulf
         on either side.
       */}
-      <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2.5 sm:flex-nowrap sm:gap-x-4 sm:px-6 sm:py-3 lg:px-8 2xl:px-12">
+      <div className="mx-auto flex w-full max-w-[1800px] flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-2 sm:flex-nowrap sm:gap-x-4 sm:px-6 sm:py-3 lg:px-8 2xl:px-12">
         <Link
           href="/"
           className="order-1 flex shrink-0 items-center gap-2 font-semibold tracking-tight"
@@ -81,7 +64,7 @@ export async function Nav() {
 
         <NavLinks
           username={me?.username}
-          className="order-3 -mx-1 w-full overflow-x-auto border-t pt-1.5 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:border-t-0 sm:pt-0"
+          className="order-3 w-full border-t pt-1.5 sm:order-2 sm:w-auto sm:border-t-0 sm:pt-0"
         />
 
         <div className="order-2 ml-auto flex min-w-0 items-center gap-2 sm:order-3 sm:gap-3">

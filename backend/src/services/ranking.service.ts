@@ -52,9 +52,18 @@ export type RankableSubmission = {
  * How one tag is compared with another, everywhere in this project.
  *
  * Trimmed and lowercased, so "Node", "node" and " node " are one technology. Every
- * comparison below goes through this, and so does the feed's tag filter, which is the
- * point of it being exported: the filter and the ranking cannot drift apart into
+ * comparison below goes through this, and so do the feed's tag filter and the profile
+ * insights, which is the point of it being exported: they cannot drift apart into
  * disagreeing about whether two tags are the same thing.
+ *
+ * DELIBERATELY DUPLICATED in frontend/src/lib/tags.ts, which counts the feed's tag rail
+ * in the browser and cannot import from the back end. The two must behave identically:
+ * if the rail groups tags differently from the way the API filters them, clicking a tag
+ * returns a count that does not match the number beside it.
+ *
+ * Both sides are pinned by the same table of cases, so changing one without the other
+ * fails a test rather than shipping. See the "parity" block in
+ * backend/tests/services/ranking.service.test.ts and frontend/tests/lib/tags.test.ts.
  */
 export function normaliseTag(tag: string): string {
   return tag.trim().toLowerCase();

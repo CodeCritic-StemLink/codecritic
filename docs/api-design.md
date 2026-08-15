@@ -1,7 +1,5 @@
 # API design
 
-Version 1, written 2026-08-11 before implementation. Build state updated 2026-08-12.
-
 The back end is Node.js with Express and TypeScript. It talks to PostgreSQL through Prisma.
 The front end never touches the database directly, it only calls the endpoints below.
 
@@ -62,15 +60,15 @@ Success returns the resource directly. Errors always look like this:
 
 ## 2. Endpoint summary
 
-| Method | Path | Auth | Purpose | State | Owner |
-| --- | --- | --- | --- | --- | --- |
-| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. | Plain version works, ranking to come | Osini |
-| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | **Built** | Andrew |
-| POST | `/submissions` | Required | Post a new review request. | **Built** | Aaysha |
-| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | **Built** | Andrew |
-| GET | `/users/:username` | Optional | Public profile with insights. | **Built** | Aqeel |
-| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. | **Built** | Osini |
-| PATCH | `/users/me` | Required | Edit your own profile only. | **Built** | Osini |
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. |
+| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. |
+| POST | `/submissions` | Required | Post a new review request. |
+| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. |
+| GET | `/users/:username` | Optional | Public profile with insights. |
+| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. |
+| PATCH | `/users/me` | Required | Edit your own profile only. |
 
 ---
 
@@ -110,7 +108,7 @@ The four parts, and why each one is there:
 
 | Part | Weight | Reason |
 | --- | --- | --- |
-| Tag match | 12 per matching tag | The spec's core requirement. Highest weight because relevance beats freshness. A perfect stack match should outrank anything. |
+| Tag match | 12 per matching tag | The point of the whole feature. Highest weight because relevance beats freshness. A perfect stack match should outrank anything. |
 | Recency | up to 10, halving every 48 hours | A month old request is less useful to answer than a fresh one. Decay rather than a cliff, so nothing vanishes suddenly. |
 | Zero reviews | flat 6 | Our own ranking improvement. Without it, requests that already have attention keep getting more, and a beginner's first post is never seen. |
 | Already reviewed by you | flat -8 | One review per person per submission is a rule, so a request you have answered is one you can do nothing more with. Smaller than a tag match, so relevance still wins and nothing is hidden. |
@@ -165,7 +163,7 @@ in SQL, since Postgres array containment is exact and case sensitive.
 ```
 
 `score` is only present when `personalised` is true. It is what powers the "Why this order?"
-toggle in the UI, which turns the demo from a claim into visible proof.
+toggle in the UI, which turns the ordering from a claim into arithmetic on screen.
 
 `reviewedByViewer` is always `false` for a logged out visitor, since there is nobody for it to
 be about. Signed in it drives both the `-8` in the score and the "you reviewed this" line on the
@@ -243,7 +241,7 @@ Post a new review request.
 | --- | --- | --- |
 | `title` | Present, not empty after trimming, at most 120 characters | `INVALID_TITLE` |
 | `description` | Present, not empty after trimming, at most 5000 characters | `INVALID_DESCRIPTION` |
-| `repoUrl` | Present and a valid URL | `INVALID_REPO_URL` |
+| `repoUrl` | Present, and a link starting `http://` or `https://` | `INVALID_REPO_URL` |
 | `tags` | Array of at least 1, at most 10, each non empty after trimming | `INVALID_TAGS` |
 | `criteria` | Array of at least 1 and at most 5, each non empty after trimming | `INVALID_CRITERIA` |
 
@@ -283,7 +281,7 @@ and the one that needs the most care.**
 | Reviewer has not already reviewed this submission | 409 | `DUPLICATE_REVIEW` |
 | `strengths` present, not empty, at most 5000 characters | 400 | `INVALID_STRENGTHS` |
 | `improvements` present, not empty, at most 5000 characters | 400 | `INVALID_IMPROVEMENTS` |
-| `resources`, if present, is an array of valid URLs, at most 5 | 400 | `INVALID_RESOURCES` |
+| `resources`, if present, is an array of `http`/`https` links, at most 5 | 400 | `INVALID_RESOURCES` |
 | `ratings` covers every criterion on the submission, no extras, no duplicates | 400 | `INCOMPLETE_RATINGS` |
 | Every `score` is an integer from 1 to 10 | 400 | `INVALID_SCORE` |
 
@@ -342,7 +340,7 @@ Public profile. **This is Feature 02.**
 }
 ```
 
-How each figure is calculated, so any member can answer when asked:
+How each figure is calculated:
 
 | Figure | Calculation |
 | --- | --- |
@@ -382,7 +380,7 @@ identity has never been seen, updates it if it has.
 | `username` | 3 to 30 characters, letters, numbers, underscore only, unique | `INVALID_USERNAME` or `USERNAME_TAKEN` |
 | `bio` | Optional, at most 500 characters | `INVALID_BIO` |
 | `techStack` | Array, at most 20 entries | `INVALID_TECH_STACK` |
-| `githubUrl` | Optional, valid URL if present | `INVALID_GITHUB_URL` |
+| `githubUrl` | Optional. A `github.com` link if present. `""` or `null` clears it | `INVALID_GITHUB_URL` |
 
 `karma` is never accepted from the client. If the body contains it, it is ignored.
 
@@ -410,9 +408,69 @@ to read the existing profile as "this person has no profile", so if the API was 
 page opened, the form appeared blank and saving it wrote blanks over a real bio and tech stack. The
 form now refuses to save anything it could not first read. See `docs/feature-02-profiles.md`.
 
+**Three states, not two.** For each field:
+
+| What the body carries | What happens |
+| --- | --- |
+| The key is absent | Whatever is stored is left alone |
+| The key is `null`, or `""` for text | The field is cleared |
+| The key has a value | The field is set to it |
+
+Both halves of that were broken and both are fixed:
+
+- `techStack` carried a `.default([])`, and `.partial()` makes a key optional **without removing its
+  default**. So `PATCH {"bio":"hi"}` parsed to `{bio:"hi", techStack:[]}` and the update wrote the
+  empty array, erasing the caller's whole tech stack. The edit schema is now built from the field
+  rules directly, so no default can leak into it. Creating a profile still defaults the stack, where
+  there is nothing to lose.
+- Nothing could be **cleared**. A blank box became `undefined`, `JSON.stringify` drops undefined
+  keys, so the field never arrived and the old value stayed. `bio` and `githubUrl` accept `null` now,
+  and the form sends `null` rather than `undefined`.
+
+Both are covered by tests in `backend/tests/models/user.schema.test.ts`, and were verified against
+the real database before and after.
+
 There is deliberately no `PATCH /users/:id`. The route has no id in it at all, so there is no way
-to aim it at somebody else's row. That is the simplest possible answer to the spec's requirement
+to aim it at somebody else's row. That is the simplest possible answer to the rule
 that a user must not be able to edit another user's profile.
+
+---
+
+## 3b. What counts as a link
+
+Three fields are stored and later rendered as the `href` of an anchor somebody clicks:
+`Submission.repoUrl`, `User.githubUrl`, and every entry in `Review.resources`.
+
+**"Is it a valid URL" is the wrong question.** All of these are valid URLs, and both
+`z.string().url()` and `new URL(value)` accept every one of them:
+
+```
+javascript:alert(document.cookie)
+data:text/html,<script>alert(1)</script>
+vbscript:msgbox(1)
+file:///C:/Windows/System32/
+```
+
+A stored `javascript:` href is script that runs in the reader's session when they click
+it, posted by anybody with an account. So the rule is the **scheme**, not the syntax:
+
+| Field | Rule |
+| --- | --- |
+| `repoUrl` | `http://` or `https://`, and a host |
+| `resources[]` | The same, each one, at most 5 |
+| `githubUrl` | The same, **and** the host must be exactly `github.com` or `www.github.com` |
+
+The GitHub host is compared exactly rather than with `endsWith`, which would accept
+`github.com.example.org`: a domain named to look like a familiar one.
+
+It lives in `backend/src/models/url.ts`, and is mirrored in `frontend/src/lib/url.ts` so
+the forms can say so while you type. The browser cannot import from the back end, so the
+duplication is unavoidable; both sides are pinned by the same table of sixteen cases, in
+`backend/tests/models/url.test.ts` and `frontend/tests/lib/url.test.ts`. Change one
+without the other and a suite fails.
+
+**The front end is a courtesy. The back end is the rule.** Anyone calling the API
+directly with `"repoUrl": "javascript:alert(1)"` gets `INVALID_REPO_URL`.
 
 ---
 
@@ -427,12 +485,12 @@ that a user must not be able to edit another user's profile.
 | `DUPLICATE_REVIEW` | 409 | You have already reviewed this submission |
 | `INVALID_TITLE` | 400 | Missing or empty or too long |
 | `INVALID_DESCRIPTION` | 400 | Missing or empty or too long |
-| `INVALID_REPO_URL` | 400 | Missing or not a URL |
+| `INVALID_REPO_URL` | 400 | Missing, or not an `http`/`https` link |
 | `INVALID_TAGS` | 400 | Fewer than 1 or more than 10 |
 | `INVALID_CRITERIA` | 400 | Fewer than 1 or more than 5 |
 | `INVALID_STRENGTHS` | 400 | Missing or empty or too long |
 | `INVALID_IMPROVEMENTS` | 400 | Missing or empty or too long |
-| `INVALID_RESOURCES` | 400 | Not an array of valid URLs, or more than 5 |
+| `INVALID_RESOURCES` | 400 | Not an array of `http`/`https` links, or more than 5 |
 | `INCOMPLETE_RATINGS` | 400 | Does not cover exactly the submission's criteria |
 | `INVALID_SCORE` | 400 | Not an integer from 1 to 10 |
 | `INVALID_USERNAME` | 400 | Wrong shape |
@@ -441,10 +499,11 @@ that a user must not be able to edit another user's profile.
 
 ---
 
-## 5. How we will prove the validation works
+## 5. Proving the validation works
 
-Mentors will call these endpoints directly, outside the front end. Before final assessment we
-run each of these by hand and keep the results:
+Every rule above is enforced in the API, not in the form, so it holds for anything
+calling these endpoints directly. Each of these can be run by hand against a running
+server:
 
 1. `POST /submissions` with no token, expect 401
 2. `POST /submissions` with an empty title, expect 400 `INVALID_TITLE`

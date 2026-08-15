@@ -82,6 +82,18 @@ export const userService = {
       await this.assertUsernameIsFree(input.username, me.clerkId);
     }
 
+    /*
+     * A field is only written when the request actually carried it.
+     *
+     * undefined means the key was absent, so whatever is stored stays. null and the
+     * empty string both mean "clear it", and both become null in the database, because
+     * an empty bio and no bio are the same thing to a reader.
+     *
+     * The `!== undefined` guards are what make this a partial update rather than a
+     * whole-row overwrite, and they are the reason the edit form uses this instead of
+     * /users/sync. See the note on updateProfileSchema for the default that used to
+     * sneak an empty techStack past them.
+     */
     return userRepository.update(me.id, {
       ...(input.username !== undefined && { username: input.username }),
       ...(input.bio !== undefined && { bio: input.bio || null }),
