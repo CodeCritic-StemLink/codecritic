@@ -332,7 +332,7 @@ export function SubmissionForm() {
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What does it do, and what feedback are you after?"
+                    placeholder="What does it do? What feedback are you after?"
                     maxLength={5000}
                     rows={4}
                   />
