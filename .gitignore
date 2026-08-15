@@ -10,7 +10,22 @@
 Thumbs.db
 desktop.ini
 
-# Editors
+# Editors and local tooling
+#
+# These are per machine settings, not part of the application. One of them,
+# .claude/settings.json, was committed once by accident and carried a Windows
+# username and a local temp path into the repository with it.
+#
+# Rules like these had been sitting in .git/info/exclude, which is local to one
+# machine and shared with nobody, so everyone else had no protection at all. They
+# belong here, where the whole team gets them.
 .vscode/
 .idea/
 *.swp
+AGENTS.md
+CLAUDE.md
+.claude/
+.cursor/
+.windsurf/
+.agents/
+skills-lock.json
