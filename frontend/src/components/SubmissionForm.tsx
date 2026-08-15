@@ -249,7 +249,7 @@ export function SubmissionForm() {
 
       <h1 className="text-[21px] font-semibold tracking-tight">Post a review request</h1>
       <p className="mt-1 text-[13.5px] text-muted-foreground">
-        Tell reviewers what you built and what you want them to look at.
+        Tell reviewers what you built and what you want them to review.
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
