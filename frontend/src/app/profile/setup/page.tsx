@@ -250,11 +250,17 @@ export default function ProfileSetupPage() {
         return;
       }
 
+      /*
+       * null, not undefined, for a box the person emptied.
+       *
+       * JSON.stringify drops undefined keys, so an emptied bio never reached the API
+       * at all and the old one stayed put. Sending null says "clear this" out loud.
+       */
       const values = {
         username: username.trim(),
-        bio: bio.trim() || undefined,
+        bio: bio.trim() || null,
         techStack,
-        githubUrl: githubUrl.trim() || undefined,
+        githubUrl: githubUrl.trim() || null,
       };
 
       /*

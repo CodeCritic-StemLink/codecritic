@@ -11,11 +11,24 @@ export type User = {
   karma: number;
 };
 
+/**
+ * What the profile form sends.
+ *
+ * bio and githubUrl are `string | null`, not `string | undefined`, and the difference
+ * decides whether an edit can empty a field:
+ *
+ *   null       clear it
+ *   absent     leave whatever is stored alone
+ *
+ * They used to be sent as undefined when the box was blank. JSON.stringify drops
+ * undefined keys, so the field never reached the API, and the update left the old
+ * value in place. You could change a bio but never remove one.
+ */
 export type ProfileInput = {
   username: string;
-  bio?: string;
+  bio?: string | null;
   techStack: string[];
-  githubUrl?: string;
+  githubUrl?: string | null;
 };
 
 /**
