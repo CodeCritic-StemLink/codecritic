@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
 import { Plus } from "lucide-react";
 
 import { BrandMark } from "@/components/BrandMark";
 import { UserMenu } from "@/components/UserMenu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NavLinks } from "@/components/NavLinks";
-import { getMe } from "@/services/user.service";
+import { getViewer } from "@/services/viewer";
 
 // The navbar: brand mark, the navigation links, a karma chip, a Post a request button,
 // and the account menu.
@@ -20,27 +19,11 @@ import { getMe } from "@/services/user.service";
 // the container below, and NavLinks.tsx for why they moved out of the centre.
 
 export async function Nav() {
-  const { userId, getToken } = await auth();
-
-  let me: { username: string; karma: number } | null = null;
-
-  if (userId) {
-    const token = await getToken();
-
-    // The karma chip is not worth breaking a page over. If there is no token, the
-    // API is unreachable, the token has expired, or the row does not exist yet
-    // because POST /users/sync has never run, render the nav without it rather than
-    // taking the whole site down. Nav runs on every route from the root layout, so a
-    // rethrown error here is a crashed site, not a missing chip.
-    if (token) {
-      try {
-        const { user } = await getMe(token);
-        me = { username: user.username, karma: user.karma };
-      } catch {
-        // Swallowed on purpose. See above.
-      }
-    }
-  }
+  // Shared with whatever page is rendering beside this one, so /users/me is fetched
+  // once per request rather than once here and again on the page. See viewer.ts, which
+  // also explains why a failure here is swallowed rather than thrown: this renders on
+  // every route, so an error would be a crashed site rather than a missing karma chip.
+  const { me, signedIn: userId } = await getViewer();
 
   return (
     <header className="border-b bg-card">

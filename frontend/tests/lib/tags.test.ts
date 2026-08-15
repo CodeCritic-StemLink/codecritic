@@ -164,3 +164,36 @@ test("sameTag says no when either side is missing, so nothing is selected by def
   expect(sameTag(undefined, "Node")).toBe(false);
   expect(sameTag("Node", undefined)).toBe(false);
 });
+
+// --------------------------------------------------------------------------
+// Parity with the back end
+//
+// normaliseTag exists twice: here, and in backend/src/services/ranking.service.ts. The
+// browser cannot import from the back end, so the duplication is unavoidable, but the
+// two behaving differently would be a real bug rather than an untidiness: the rail
+// would group tags one way while the API filtered them another, and clicking a tag
+// would return a count that did not match the number printed beside it.
+//
+// This exact table is asserted in backend/tests/services/ranking.service.test.ts under
+// the same heading. Change one implementation without the other and one of the two
+// suites fails. Keep the two tables identical.
+// --------------------------------------------------------------------------
+
+const PARITY_CASES: Array<[string, string]> = [
+  ["Node", "node"],
+  ["node", "node"],
+  ["NODE", "node"],
+  [" Node ", "node"],
+  ["\tNode\n", "node"],
+  ["Next.js", "next.js"],
+  ["C++", "c++"],
+  ["", ""],
+  ["   ", ""],
+  ["React Native", "react native"],
+];
+
+test("normaliseTag agrees with the back end on every case in the shared table", () => {
+  for (const [input, expected] of PARITY_CASES) {
+    expect(normaliseTag(input)).toBe(expected);
+  }
+});

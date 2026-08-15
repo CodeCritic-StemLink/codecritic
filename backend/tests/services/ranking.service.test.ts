@@ -316,3 +316,36 @@ test("equal scores break the tie on newest first, so the order is never random",
 
   expect(order).toEqual(["newer", "older"]);
 });
+
+// --------------------------------------------------------------------------
+// Parity with the front end
+//
+// normaliseTag exists twice: here, and in frontend/src/lib/tags.ts. The browser cannot
+// import from the back end, so the duplication is unavoidable, but the two behaving
+// differently would be a real bug rather than an untidiness: the feed's tag rail would
+// group tags one way while this filtered them another, and clicking a tag would return
+// a count that did not match the number printed beside it.
+//
+// This exact table is asserted in frontend/tests/lib/tags.test.ts under the same
+// heading. Change one implementation without the other and one of the two suites
+// fails. Keep the two tables identical.
+// --------------------------------------------------------------------------
+
+const PARITY_CASES: Array<[string, string]> = [
+  ["Node", "node"],
+  ["node", "node"],
+  ["NODE", "node"],
+  [" Node ", "node"],
+  ["\tNode\n", "node"],
+  ["Next.js", "next.js"],
+  ["C++", "c++"],
+  ["", ""],
+  ["   ", ""],
+  ["React Native", "react native"],
+];
+
+test("normaliseTag agrees with the front end on every case in the shared table", () => {
+  for (const [input, expected] of PARITY_CASES) {
+    expect(normaliseTag(input)).toBe(expected);
+  }
+});
