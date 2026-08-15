@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isSafeUrl } from "./url";
+
 // Validation for anything to do with submissions. The only place these rules are written.
 
 /**
@@ -44,7 +46,16 @@ export const createSubmissionSchema = z.object({
     .min(1, "Description is required.")
     .max(5000, "Description must be 5000 characters or fewer."),
 
-  repoUrl: z.string().trim().url("That is not a valid URL."),
+  /*
+   * Checked with isSafeUrl rather than zod's .url(), which accepts
+   * `javascript:alert(1)` because that genuinely is a valid URL. This value is
+   * rendered as the href of a link on the submission page, so the scheme is what
+   * matters, not the syntax. See models/url.ts.
+   */
+  repoUrl: z
+    .string()
+    .trim()
+    .refine(isSafeUrl, "That is not a valid link. It must start with http:// or https://."),
 
   tags: z
     .array(z.string().trim().min(1))

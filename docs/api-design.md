@@ -243,7 +243,7 @@ Post a new review request.
 | --- | --- | --- |
 | `title` | Present, not empty after trimming, at most 120 characters | `INVALID_TITLE` |
 | `description` | Present, not empty after trimming, at most 5000 characters | `INVALID_DESCRIPTION` |
-| `repoUrl` | Present and a valid URL | `INVALID_REPO_URL` |
+| `repoUrl` | Present, and a link starting `http://` or `https://` | `INVALID_REPO_URL` |
 | `tags` | Array of at least 1, at most 10, each non empty after trimming | `INVALID_TAGS` |
 | `criteria` | Array of at least 1 and at most 5, each non empty after trimming | `INVALID_CRITERIA` |
 
@@ -283,7 +283,7 @@ and the one that needs the most care.**
 | Reviewer has not already reviewed this submission | 409 | `DUPLICATE_REVIEW` |
 | `strengths` present, not empty, at most 5000 characters | 400 | `INVALID_STRENGTHS` |
 | `improvements` present, not empty, at most 5000 characters | 400 | `INVALID_IMPROVEMENTS` |
-| `resources`, if present, is an array of valid URLs, at most 5 | 400 | `INVALID_RESOURCES` |
+| `resources`, if present, is an array of `http`/`https` links, at most 5 | 400 | `INVALID_RESOURCES` |
 | `ratings` covers every criterion on the submission, no extras, no duplicates | 400 | `INCOMPLETE_RATINGS` |
 | Every `score` is an integer from 1 to 10 | 400 | `INVALID_SCORE` |
 
@@ -382,7 +382,7 @@ identity has never been seen, updates it if it has.
 | `username` | 3 to 30 characters, letters, numbers, underscore only, unique | `INVALID_USERNAME` or `USERNAME_TAKEN` |
 | `bio` | Optional, at most 500 characters | `INVALID_BIO` |
 | `techStack` | Array, at most 20 entries | `INVALID_TECH_STACK` |
-| `githubUrl` | Optional, valid URL if present | `INVALID_GITHUB_URL` |
+| `githubUrl` | Optional. A `github.com` link if present. `""` or `null` clears it | `INVALID_GITHUB_URL` |
 
 `karma` is never accepted from the client. If the body contains it, it is ignored.
 
@@ -438,6 +438,44 @@ that a user must not be able to edit another user's profile.
 
 ---
 
+## 3b. What counts as a link
+
+Three fields are stored and later rendered as the `href` of an anchor somebody clicks:
+`Submission.repoUrl`, `User.githubUrl`, and every entry in `Review.resources`.
+
+**"Is it a valid URL" is the wrong question.** All of these are valid URLs, and both
+`z.string().url()` and `new URL(value)` accept every one of them:
+
+```
+javascript:alert(document.cookie)
+data:text/html,<script>alert(1)</script>
+vbscript:msgbox(1)
+file:///C:/Windows/System32/
+```
+
+A stored `javascript:` href is script that runs in the reader's session when they click
+it, posted by anybody with an account. So the rule is the **scheme**, not the syntax:
+
+| Field | Rule |
+| --- | --- |
+| `repoUrl` | `http://` or `https://`, and a host |
+| `resources[]` | The same, each one, at most 5 |
+| `githubUrl` | The same, **and** the host must be exactly `github.com` or `www.github.com` |
+
+The GitHub host is compared exactly rather than with `endsWith`, which would accept
+`github.com.example.org`: a domain named to look like a familiar one.
+
+It lives in `backend/src/models/url.ts`, and is mirrored in `frontend/src/lib/url.ts` so
+the forms can say so while you type. The browser cannot import from the back end, so the
+duplication is unavoidable; both sides are pinned by the same table of sixteen cases, in
+`backend/tests/models/url.test.ts` and `frontend/tests/lib/url.test.ts`. Change one
+without the other and a suite fails.
+
+**The front end is a courtesy. The back end is the rule.** A mentor calling the API
+directly with `"repoUrl": "javascript:alert(1)"` gets `INVALID_REPO_URL`.
+
+---
+
 ## 4. Error codes in one list
 
 | Code | Status | Meaning |
@@ -449,12 +487,12 @@ that a user must not be able to edit another user's profile.
 | `DUPLICATE_REVIEW` | 409 | You have already reviewed this submission |
 | `INVALID_TITLE` | 400 | Missing or empty or too long |
 | `INVALID_DESCRIPTION` | 400 | Missing or empty or too long |
-| `INVALID_REPO_URL` | 400 | Missing or not a URL |
+| `INVALID_REPO_URL` | 400 | Missing, or not an `http`/`https` link |
 | `INVALID_TAGS` | 400 | Fewer than 1 or more than 10 |
 | `INVALID_CRITERIA` | 400 | Fewer than 1 or more than 5 |
 | `INVALID_STRENGTHS` | 400 | Missing or empty or too long |
 | `INVALID_IMPROVEMENTS` | 400 | Missing or empty or too long |
-| `INVALID_RESOURCES` | 400 | Not an array of valid URLs, or more than 5 |
+| `INVALID_RESOURCES` | 400 | Not an array of `http`/`https` links, or more than 5 |
 | `INCOMPLETE_RATINGS` | 400 | Does not cover exactly the submission's criteria |
 | `INVALID_SCORE` | 400 | Not an integer from 1 to 10 |
 | `INVALID_USERNAME` | 400 | Wrong shape |

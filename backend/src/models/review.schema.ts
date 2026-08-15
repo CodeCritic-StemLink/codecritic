@@ -1,4 +1,5 @@
 import { BadRequestError } from "../errors/appError";
+import { isSafeUrl } from "./url";
 
 // Pure validation for a review body. No prisma, no req, no res: takes plain values,
 // returns plain values or throws. This has to be a hand-written function rather than
@@ -27,16 +28,13 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isValidUrl(value: unknown): value is string {
-  if (typeof value !== "string") return false;
-
-  try {
-    new URL(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
+/*
+ * Resource links are checked with isSafeUrl rather than by parsing alone.
+ *
+ * `new URL("javascript:alert(1)")` succeeds, because that is a valid URL, and every
+ * resource on a review is rendered as the href of a link that other people click. The
+ * scheme is what matters here, not the syntax. See models/url.ts.
+ */
 
 /**
  * Steps 4 to 8 of the review validation in docs/api-design.md. Steps 1 to 3
@@ -68,10 +66,10 @@ export function validateReviewFields(body: unknown, criteria: CriterionRef[]): V
   if (
     !Array.isArray(resourcesRaw) ||
     resourcesRaw.length > MAX_RESOURCES ||
-    !resourcesRaw.every(isValidUrl)
+    !resourcesRaw.every(isSafeUrl)
   ) {
     throw new BadRequestError(
-      "Resources must be an array of valid URLs, at most 5.",
+      "Resources must be an array of links starting with http:// or https://, at most 5.",
       "INVALID_RESOURCES"
     );
   }

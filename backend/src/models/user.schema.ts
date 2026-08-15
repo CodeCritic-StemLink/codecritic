@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isGithubUrl } from "./url";
+
 // The shape a profile must have. This is the only place these rules are written.
 //
 // Note what is NOT here: karma. Zod strips fields it does not know about, so a request
@@ -33,13 +35,26 @@ const fields = {
     .array(z.string().trim().min(1))
     .max(20, "You can list at most 20 technologies."),
 
+  /*
+   * A GitHub link, and only a GitHub link.
+   *
+   * Two things are being stopped here. zod's .url() accepts `javascript:alert(1)`,
+   * because that is a valid URL, and this value is rendered as the href of a link on
+   * the public profile. And the field is labelled GitHub in the form and shown as a
+   * GitHub link on the profile, so anything else in it is mislabelled.
+   *
+   * The empty string is allowed and means the same as null: clear it. See models/url.ts.
+   */
   githubUrl: z
-    .string()
-    .trim()
-    .url("That is not a valid URL.")
-    .nullable()
-    .optional()
-    .or(z.literal("")),
+    .union([
+      z.literal(""),
+      z.null(),
+      z
+        .string()
+        .trim()
+        .refine(isGithubUrl, "That is not a GitHub link. It should look like https://github.com/you."),
+    ])
+    .optional(),
 };
 
 /**
