@@ -529,3 +529,4 @@ asserts the ranked list contains exactly the same ids as the input.
 **What is your own improvement?** Two. Recency decay with a 48 hour half life, and the
 six point boost for posts nobody has reviewed. The second is the one with a story: it
 breaks the loop where attention only goes to posts that already have attention.
+-----------------------------------
