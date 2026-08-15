@@ -1,7 +1,5 @@
 # Database design
 
-Version 1, written 2026-08-11, before implementation.
-
 The database is PostgreSQL, accessed through Prisma. Everything the platform stores is one of
 five tables.
 
@@ -174,7 +172,7 @@ does.
 
 ### Status is derived, not stored
 
-The spec has two statuses, Pending and Reviewed, and says the system updates them.
+A request is either waiting for feedback or it has some.
 
 We do not store a status column. A submission with zero reviews is Pending, and one with one or
 more reviews is Reviewed. It is computed by counting that submission's reviews.

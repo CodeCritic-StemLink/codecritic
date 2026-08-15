@@ -1,9 +1,7 @@
 # Feature 02: reviewer reputation and profile insights
 
-The optional feature, which this group built anyway. Written 2026-08-14.
-
-Every figure below is from the live database, so the numbers in this document are the
-numbers on the site.
+Every figure below is read from the live database, so the numbers in this document are
+the numbers on the site.
 
 ---
 
@@ -42,14 +40,15 @@ wide monitor. Each band lays out in as many columns as there is room for and col
 to one on a phone.
 
 **Reviews written and reviews received sit side by side deliberately.** They are the
-pair the SRS warns is easy to get the wrong way round, and next to each other the
+pair that is easiest to get the wrong way round, and next to each other the
 difference is visible rather than something you have to remember while scrolling.
 
-Anyone can view it, signed in or not, because the SRS requires profiles to be public.
+Anyone can view it, signed in or not. Profiles are public by design: the point of a
+reputation is that people who have never met you can read it.
 
 ---
 
-## 2. What the SRS demanded, and what we did
+## 2. What it has to do
 
 | Requirement | What we built |
 | --- | --- |
@@ -60,16 +59,15 @@ Anyone can view it, signed in or not, because the SRS requires profiles to be pu
 | Clear navigation back to the feed | "Back to the feed" at the top, and every submission links through |
 | Explain how each figure is calculated | This document, section 4 |
 
-We went past the requirement in one place: the SRS asks for *counts* of reviews given
-and received. We show the **full text of every review** as well, because the SRS
-elsewhere says a user must be able to *manage* their activity, and a number is not
-something you can read.
+We went further than counts in one place. A number tells you how much somebody has
+written. It does not let them look back at what they wrote, or read what was written
+about their own work. So both lists carry the **full text of every review**.
 
 ---
 
 ## 2b. Editing your own profile
 
-**The SRS rule is that you may not edit *another* user's profile.** It says nothing
+**The rule is that you may not edit *another* user's profile.** It says nothing
 against editing your own, and it does require a user to manage their own activity, so
 editing your own is expected rather than merely allowed.
 
@@ -82,8 +80,8 @@ could add a technology or fix their bio after sign up. The button is the whole f
 
 ### The form will not save what it could not first read
 
-This is worth being able to explain, because it was a real bug and the fix is a good
-answer to "how do you stop a partial failure corrupting data".
+This was a real bug, and the fix is the interesting part: how to stop a partial failure
+corrupting data.
 
 `POST /users/sync` writes **every** column it is given, which is right for the first
 save when there is no row yet. The form used it for edits too, and it treated **any**
@@ -120,7 +118,7 @@ than in a catch block inside the page, because it is the exact line the bug live
 
 ### Why nobody can edit somebody else's
 
-This is a likely question, and the answer is better than "we check permissions".
+The answer is better than "we check permissions".
 
 ```
 POST /users/sync
@@ -178,7 +176,7 @@ API never had a fixed list; only the form did.
 
 ## 4. How every figure is calculated
 
-This is the section to know. Expect "prove this number is right".
+Every number on the page, and how it is arrived at.
 
 ### Karma: `8`
 
@@ -210,7 +208,7 @@ SELECT * FROM "Review" WHERE "reviewerId" = <them>
 
 ### Reviews received: `2`
 
-**This is the trap, and the SRS calls it out.**
+**This is the trap.**
 
 Reviews received is **not** reviews where this person is the reviewer. It is reviews
 written **on submissions this person authored**, by other people.
@@ -224,7 +222,7 @@ written **on submissions this person authored**, by other people.
 ```
 
 Two different relations, queried two different ways. Getting them the same way round
-would make both numbers identical, which is exactly the bug the SRS is warning about.
+would make both numbers identical, and identical numbers look plausible enough to ship.
 
 ```sql
 SELECT * FROM "Review"
@@ -355,8 +353,8 @@ Those tests check the counting against numbers worked out by hand, including the
 stopped looks identical to somebody still active. The monthly chart is the only hint.
 
 **Karma measures volume, not quality.** Twenty short reviews earn more than five careful
-ones. The SRS fixes Karma at +2 per review with no weighting, so this is the spec's
-choice, not an oversight, but it is worth saying rather than pretending Karma means
+ones. Karma is fixed at +2 per review with no weighting, which is a deliberate choice
+rather than an oversight, but it is worth saying rather than pretending Karma means
 "good reviewer".
 
 **The average score can be gamed.** Someone who rates everything 10 has a high average
@@ -387,7 +385,7 @@ link.
 
 ---
 
-## 9. Questions to have answers ready for
+## 9. Common questions
 
 **How is Karma calculated?** It is not. It is a column, changed only inside the review
 transaction, +2 at a time. Check it: karma equals reviews given times two, for every
@@ -398,8 +396,8 @@ strips it from the body before our code runs. There is a test asserting that.
 
 **What is the difference between reviews given and received?** Given is where you are
 the reviewer. Received is reviews on submissions you authored, written by other people.
-Two different relations. Getting them the same way round is the trap the SRS warns
-about.
+Two different relations. Getting them the same way round is the trap, and the result
+looks plausible enough to miss.
 
 **Where does "technologies reviewed in" come from?** The tags of the submissions you
 reviewed, counted. Not your own tech stack, which is what you claim; this is what you
@@ -415,8 +413,8 @@ everybody zero". Null lets the page say "no scores given yet" instead of lying.
 counting reviews. A stored flag could go stale; a derived one cannot.
 
 **Can a user edit their profile after signing up?** Yes. Edit profile at the top right
-of your own profile page. The SRS forbids editing *another* user's profile, not your
-own.
+of your own profile page. What is forbidden is editing *another* user's profile, not
+your own.
 
 **What happens if the API is down when you open the edit form?** The form loads
 disabled, says it could not read your profile, and offers a retry. It will not save.

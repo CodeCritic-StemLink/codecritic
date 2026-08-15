@@ -1,7 +1,5 @@
 # API design
 
-Version 1, written 2026-08-11 before implementation. Build state updated 2026-08-12.
-
 The back end is Node.js with Express and TypeScript. It talks to PostgreSQL through Prisma.
 The front end never touches the database directly, it only calls the endpoints below.
 
@@ -62,15 +60,15 @@ Success returns the resource directly. Errors always look like this:
 
 ## 2. Endpoint summary
 
-| Method | Path | Auth | Purpose | State | Owner |
-| --- | --- | --- | --- | --- | --- |
-| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. | Plain version works, ranking to come | Osini |
-| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. | **Built** | Andrew |
-| POST | `/submissions` | Required | Post a new review request. | **Built** | Aaysha |
-| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. | **Built** | Andrew |
-| GET | `/users/:username` | Optional | Public profile with insights. | **Built** | Aqeel |
-| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. | **Built** | Osini |
-| PATCH | `/users/me` | Required | Edit your own profile only. | **Built** | Osini |
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| GET | `/submissions` | Optional | The feed. Ranked when signed in, newest first when not. |
+| GET | `/submissions/:id` | Optional | One request in full, with criteria and reviews. |
+| POST | `/submissions` | Required | Post a new review request. |
+| POST | `/submissions/:id/reviews` | Required | Write a review and earn +2 Karma. |
+| GET | `/users/:username` | Optional | Public profile with insights. |
+| POST | `/users/sync` | Required | Create or update our User row from the Clerk identity. |
+| PATCH | `/users/me` | Required | Edit your own profile only. |
 
 ---
 
@@ -110,7 +108,7 @@ The four parts, and why each one is there:
 
 | Part | Weight | Reason |
 | --- | --- | --- |
-| Tag match | 12 per matching tag | The spec's core requirement. Highest weight because relevance beats freshness. A perfect stack match should outrank anything. |
+| Tag match | 12 per matching tag | The point of the whole feature. Highest weight because relevance beats freshness. A perfect stack match should outrank anything. |
 | Recency | up to 10, halving every 48 hours | A month old request is less useful to answer than a fresh one. Decay rather than a cliff, so nothing vanishes suddenly. |
 | Zero reviews | flat 6 | Our own ranking improvement. Without it, requests that already have attention keep getting more, and a beginner's first post is never seen. |
 | Already reviewed by you | flat -8 | One review per person per submission is a rule, so a request you have answered is one you can do nothing more with. Smaller than a tag match, so relevance still wins and nothing is hidden. |
@@ -165,7 +163,7 @@ in SQL, since Postgres array containment is exact and case sensitive.
 ```
 
 `score` is only present when `personalised` is true. It is what powers the "Why this order?"
-toggle in the UI, which turns the demo from a claim into visible proof.
+toggle in the UI, which turns the ordering from a claim into arithmetic on screen.
 
 `reviewedByViewer` is always `false` for a logged out visitor, since there is nobody for it to
 be about. Signed in it drives both the `-8` in the score and the "you reviewed this" line on the
@@ -342,7 +340,7 @@ Public profile. **This is Feature 02.**
 }
 ```
 
-How each figure is calculated, so any member can answer when asked:
+How each figure is calculated:
 
 | Figure | Calculation |
 | --- | --- |
@@ -433,7 +431,7 @@ Both are covered by tests in `backend/tests/models/user.schema.test.ts`, and wer
 the real database before and after.
 
 There is deliberately no `PATCH /users/:id`. The route has no id in it at all, so there is no way
-to aim it at somebody else's row. That is the simplest possible answer to the spec's requirement
+to aim it at somebody else's row. That is the simplest possible answer to the rule
 that a user must not be able to edit another user's profile.
 
 ---
@@ -471,7 +469,7 @@ duplication is unavoidable; both sides are pinned by the same table of sixteen c
 `backend/tests/models/url.test.ts` and `frontend/tests/lib/url.test.ts`. Change one
 without the other and a suite fails.
 
-**The front end is a courtesy. The back end is the rule.** A mentor calling the API
+**The front end is a courtesy. The back end is the rule.** Anyone calling the API
 directly with `"repoUrl": "javascript:alert(1)"` gets `INVALID_REPO_URL`.
 
 ---
@@ -501,10 +499,11 @@ directly with `"repoUrl": "javascript:alert(1)"` gets `INVALID_REPO_URL`.
 
 ---
 
-## 5. How we will prove the validation works
+## 5. Proving the validation works
 
-Mentors will call these endpoints directly, outside the front end. Before final assessment we
-run each of these by hand and keep the results:
+Every rule above is enforced in the API, not in the form, so it holds for anything
+calling these endpoints directly. Each of these can be run by hand against a running
+server:
 
 1. `POST /submissions` with no token, expect 401
 2. `POST /submissions` with an empty title, expect 400 `INVALID_TITLE`
