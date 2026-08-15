@@ -21,20 +21,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { PageShell } from "@/components/PageShell";
 import { createSubmission } from "@/services/submission.service";
 import { urlProblem } from "@/lib/url";
 import { ApiError } from "@/api/api";
 
-// The post-a-request form, as a 4-step wizard, with a tips sidebar alongside it.
+// The post-a-request form, as a 4-step wizard.
 //
-// The wizard keeps each step short enough to fit on a phone without scrolling. The
-// sidebar fills the horizontal space that opens up on a wide screen, so the page reads
-// as a proper two-column layout instead of one narrow form floating in the middle of
-// a lot of empty white space. On a small screen the sidebar drops below the form,
-// since there is no room for two columns there.
+// Splitting it into steps keeps each one short enough to fit on a phone without
+// scrolling, and short enough on a laptop that the Next button stays above the fold.
 //
-// Every rule shown in the form is a courtesy. The real validation is server side in
-// POST /submissions, and a mentor calling the API directly with none of this will hit
+// The form has the page to itself and the tips sit underneath it. They used to be a
+// fixed rail down the right hand side, which took a third of the width away from the
+// thing you are actually filling in, and rendered advice for all four steps at once.
+//
+// Every rule shown here is a courtesy. The real validation is server side in
+// POST /submissions, and anything calling the API directly with none of this will hit
 // the same errors.
 
 const MAX_TAGS = 10;
@@ -87,6 +89,12 @@ const TIPS = [
     Icon: ListChecks,
     title: "Keep criteria specific",
     body: "\"Code Quality\" and \"Performance\" are easier to rate honestly than one broad \"Everything\" criterion. Fewer, sharper criteria get better ratings.",
+  },
+  {
+    step: 3 as Step,
+    Icon: Check,
+    title: "Read it back once",
+    body: "This is what a reviewer sees before they decide whether to spend half an hour on you. Anything vague here costs you a review.",
   },
 ];
 
@@ -151,6 +159,9 @@ export function SubmissionForm() {
    * it; this is so the problem is visible where it was typed. See lib/url.ts.
    */
   const repoProblem = urlProblem(repoUrl);
+
+  /** The advice that applies to the step you are actually on. */
+  const tipsForStep = TIPS.filter((tip) => tip.step === step);
 
   const basicsValid =
     title.trim().length > 0 &&
@@ -219,12 +230,12 @@ export function SubmissionForm() {
   }
 
   if (!isLoaded) {
-    return <div className="mx-auto w-full max-w-5xl px-6 py-16" />;
+    return <PageShell />;
   }
 
   if (!user) {
     return (
-      <div className="mx-auto w-full max-w-xl px-6 py-16">
+      <PageShell>
         <Link
           href="/"
           className="mb-4 flex items-center gap-1 text-[13px] text-muted-foreground hover:text-primary"
@@ -236,12 +247,12 @@ export function SubmissionForm() {
         <p className="mt-2 text-sm text-muted-foreground">
           You need an account before you can post a review request.
         </p>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8 sm:py-10">
+    <PageShell>
       <div className="mb-4 flex items-center justify-between">
         <Link
           href="/"
@@ -266,7 +277,12 @@ export function SubmissionForm() {
         Tell reviewers what you built and what you want them to review.
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      {/*
+        One column, full width. The tips used to sit in a 320px rail beside the form,
+        which took a third of the page away from the thing you are actually filling in.
+        They are a row underneath now, where they can be read across rather than down.
+      */}
+      <div className="mt-5">
         <div className="min-w-0">
           {/* Step indicator. Numbers only under sm, numbers plus labels from sm up. */}
           <ol className="flex items-center gap-1.5">
@@ -320,7 +336,10 @@ export function SubmissionForm() {
 
           <div className="mt-5 min-h-[280px] rounded-[var(--radius)] border bg-card p-5">
             {step === 0 ? (
-              <div className="flex flex-col gap-4">
+              /* Title and repository link side by side from sm up. They are both one
+                 line of typing, and stacking them made this step tall enough to push
+                 the Next button off a laptop screen. */
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label htmlFor="title" className="mb-1.5 block text-[12.5px] font-semibold">
                     Title
@@ -332,23 +351,6 @@ export function SubmissionForm() {
                     placeholder="React dashboard that re-renders too often"
                     maxLength={120}
                     autoFocus
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="description"
-                    className="mb-1.5 block text-[12.5px] font-semibold"
-                  >
-                    Description
-                  </label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="What does it do? What feedback are you after?"
-                    maxLength={5000}
-                    rows={4}
                   />
                 </div>
 
@@ -379,6 +381,24 @@ export function SubmissionForm() {
                     {repoProblem ?? "Paste the link to the repository you want reviewed."}
                   </p>
                 </div>
+
+                {/* Full width underneath the two short fields. */}
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="description"
+                    className="mb-1.5 block text-[12.5px] font-semibold"
+                  >
+                    Description
+                  </label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What does it do? What feedback are you after?"
+                    maxLength={5000}
+                    rows={4}
+                  />
+                </div>
               </div>
             ) : null}
 
@@ -393,7 +413,7 @@ export function SubmissionForm() {
                     {tags.length} of {MAX_TAGS}
                   </span>
                 </label>
-                <div className="flex gap-1.5">
+                <div className="flex max-w-xl gap-1.5">
                   <Input
                     id="tag-draft"
                     value={tagDraft}
@@ -462,7 +482,7 @@ export function SubmissionForm() {
                   </span>
                 </label>
 
-                <div className="flex gap-1.5">
+                <div className="flex max-w-xl gap-1.5">
                   <Input
                     id="criterion-draft"
                     value={criterionDraft}
@@ -616,55 +636,41 @@ export function SubmissionForm() {
           </div>
         </div>
 
-        <aside className="lg:sticky lg:top-8 lg:self-start">
-          <div className="rounded-[var(--radius)] border border-primary/15 bg-primary/[0.04] p-5">
-            <p className="text-[13px] font-semibold text-foreground">Tips and guidelines</p>
-            <p className="mt-1 text-[12px] text-muted-foreground">
-              A request written this way gets clearer, faster feedback.
-            </p>
+        {/*
+          The tips, underneath the form and across it.
 
-            <ul className="mt-4 flex flex-col gap-3.5">
-              {TIPS.map(({ step: tipStep, Icon, title: tipTitle, body }) => {
-                const highlighted = tipStep === step;
+          Only the ones for the step you are on: all five used to render at once with
+          the current one highlighted, and the other four were advice about a step you
+          had either finished or not reached.
+        */}
+        <aside className="mt-6 border-t pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Tips for this step
+          </p>
 
-                return (
-                  <li
-                    key={tipTitle}
-                    className={[
-                      "rounded-lg border p-3 transition-colors",
-                      highlighted
-                        ? "border-primary/30 bg-card"
-                        : "border-transparent bg-transparent",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      <span
-                        className={[
-                          "mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full",
-                          highlighted
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-primary/10 text-primary",
-                        ].join(" ")}
-                      >
-                        <Icon className="size-3.5" aria-hidden />
-                      </span>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {tipsForStep.map(({ Icon, title: tipTitle, body }) => (
+              <li
+                key={tipTitle}
+                className="rounded-[var(--radius)] border border-primary/20 bg-primary/[0.04] p-3.5"
+              >
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Icon className="size-3.5" aria-hidden />
+                  </span>
 
-                      <div className="min-w-0">
-                        <p className="text-[12.5px] font-semibold text-foreground">
-                          {tipTitle}
-                        </p>
-                        <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
-                          {body}
-                        </p>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+                  <div className="min-w-0">
+                    <p className="text-[12.5px] font-semibold text-foreground">{tipTitle}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-muted-foreground">
+                      {body}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
         </aside>
       </div>
-    </div>
+    </PageShell>
   );
 }
